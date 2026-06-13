@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Base64 图片转换器 - Image to Base64 & Base64 to Image</title>
+<style>
+  :root {
+    --bg-primary: #0c0f15;
+    --bg-secondary: #131820;
+    --bg-card: #1a212e;
+    --bg-card-hover: #1f2737;
+    --border: #2a3448;
+    --border-active: #4cc9f0;
+    --text-primary: #e8edf5;
+    --text-secondary: #8892a8;
+    --text-muted: #5a647b;
+    --accent: #4cc9f0;
+    --accent-dim: rgba(76, 201, 240, 0.15);
+    --accent-glow: rgba(76, 201, 240, 0.25);
+    --green: #34d399;
+    --green-dim: rgba(52, 211, 153, 0.15);
+    --orange: #fbbf24;
+    --orange-dim: rgba(251, 191, 36, 0.15);
+    --red: #f87171;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -20%, rgba(76, 201, 240, 0.06), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 90%, rgba(52, 211, 153, 0.04), transparent);
+  }
+
+  /* Header */
+  .header {
+    width: 100%;
+    max-width: 960px;
+    padding: 40px 24px 0;
+    text-align: center;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.3px;
+    margin-bottom: 16px;
+  }
+
+  .header-badge svg { width: 14px; height: 14px; }
+
+  .header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+
+  .header h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  /* Container */
+  .container {
+    width: 100%;
+    max-width: 960px;
+    padding: 32px 24px 60px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    padding: 4px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: calc(var(--radius) - 4px);
+    transition: var(--transition);
+    position: relative;
+    z-index: 1;
+  }
+
+  .tab-btn:hover { color: var(--text-secondary); }
+  .tab-btn.active {
+    color: var(--text-primary);
+    background: var(--bg-card);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+    /* Glassmorphism Main Menu - Top Bar */
+  .menu-bar {
+    width: 100%;
+    background: rgba(12, 15, 21, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .menu-group {
+    display: flex;
+    gap: 2px;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .menu-btn {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    letter-spacing: 0.3px;
+    position: relative;
+  }
+
+  .menu-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 60%;
+    height: 2.5px;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .menu-btn:hover {
+    color: var(--text-secondary);
+  }
+
+  .menu-btn.active {
+    color: var(--accent);
+  }
+
+  .menu-btn.active::after {
+    transform: translateX(-50%) scaleX(1);
+  }
+
+  .menu-btn .menu-sub {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: inherit;
+    opacity: 0.4;
+    margin-top: 1px;
+    letter-spacing: 0.5px;
+  }
+
+  .menu-btn.active .menu-sub {
+    opacity: 0.6;
+  }
+
+  /* Sub-tabs reuse .tabs/.tab-btn styles */
+  #subTabs {
+    margin-bottom: 24px;
+  }
+
+  /* Panel group */
+  .panel-group { display: none; }
+  .panel-group.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: var(--transition);
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Drop Zone */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    background: rgba(255,255,255,0.02);
+  }
+
+  .drop-zone:hover,
+  .drop-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .drop-zone.has-image {
+    padding: 8px;
+    border-style: solid;
+    border-color: var(--border);
+    cursor: default;
+  }
+
+  .drop-zone-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .drop-zone-icon svg { width: 24px; height: 24px; color: var(--accent); }
+
+  .drop-zone-text { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .drop-zone-hint { font-size: 13px; color: var(--text-muted); }
+  .drop-zone-hint strong { color: var(--accent); font-weight: 600; }
+
+  .drop-zone input[type="file"] { display: none; }
+
+  .drop-zone .preview-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  .drop-zone .preview-wrap img {
+    max-height: 260px;
+    max-width: 100%;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .drop-zone .remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    backdrop-filter: blur(4px);
+  }
+
+  .drop-zone .remove-btn:hover { background: var(--red); }
+
+  /* Result section */
+  .result-section { margin-top: 16px; display: none; }
+  .result-section.visible { display: block; }
+
+  .result-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .meta-tag {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .meta-tag.mime { background: var(--accent-dim); color: var(--accent); }
+  .meta-tag.size { background: var(--green-dim); color: var(--green); }
+
+  /* Textarea / Output */
+  .output-area {
+    position: relative;
+  }
+
+  .output-area textarea,
+  .input-area textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    transition: var(--transition);
+  }
+
+  .output-area textarea:focus,
+  .input-area textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .output-area textarea {
+    min-height: 80px;
+    padding-right: 48px;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+  }
+
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0c0f15;
+  }
+
+  .btn-primary:hover {
+    background: #5dd4f5;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--text-muted);
+  }
+
+  .btn-danger {
+    background: var(--red);
+    color: #fff;
+  }
+
+  .btn-danger:hover {
+    background: #ef4444;
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Base64 input mode */
+  .input-area { margin-bottom: 0; }
+
+  .input-area .btn-row { margin-top: 14px; }
+
+  /* Snippets section */
+  .snippets { display: none; }
+  .snippets.visible { display: block; }
+
+  .snippet-item {
+    margin-bottom: 14px;
+  }
+
+  .snippet-item:last-child { margin-bottom: 0; }
+
+  .snippet-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .snippet-code {
+    position: relative;
+  }
+
+  .snippet-code pre {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .snippet-code .copy-btn {
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Error toast */
+  .toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 999;
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  .toast.error { background: var(--red); color: #fff; }
+  .toast.success { background: var(--green); color: #0c0f15; }
+
+  /* Footer */
+  .footer {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    width: 100%;
+    max-width: 960px;
+  }
+
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* Tab content */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .header { padding-top: 28px; }
+    .header h1 { font-size: 26px; }
+    .container { padding: 20px 16px 40px; }
+    .card { padding: 16px; }
+    .drop-zone { padding: 32px 16px; }
+    .tabs { flex-direction: row; }
+    .tab-btn { font-size: 13px; padding: 10px 12px; }
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card { animation: fadeIn 0.4s ease both; }
+  .card:nth-child(2) { animation-delay: 0.05s; }
+  .card:nth-child(3) { animation-delay: 0.1s; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Tab content panels layout */
+  .panel-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .panel-grid-horizontal {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .panel-grid-horizontal .card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-grid-horizontal .card:first-child {
+    flex: 0 0 45%;
+  }
+
+  .panel-grid-horizontal .card:last-child {
+    flex: 1;
+  }
+
+  .panel-grid-horizontal .input-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-grid-horizontal .input-area textarea {
+    flex: 1;
+    min-height: 180px;
+  }
+
+  .panel-grid-horizontal .decode-preview {
+    margin-top: 0;
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+
+  .panel-grid-horizontal .decode-preview.visible {
+    display: flex;
+  }
+
+  .panel-grid-horizontal .decode-preview img {
+    max-height: 320px;
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    object-fit: contain;
+  }
+
+  .panel-grid-horizontal .decode-preview .btn-row {
+    justify-content: center;
+  }
+
+  .panel-grid-horizontal #noPreview {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  @media (max-width: 768px) {
+    .panel-grid-horizontal {
+      flex-direction: column;
+    }
+    .panel-grid-horizontal .card:first-child {
+      flex: none;
+    }
+  }
+
+  /* Clear button inline */
+  .clear-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Top Menu Bar -->
+<div class="menu-bar">
+  <div class="menu-group">
+    <button class="menu-btn" data-group="image">
+      🖼 图片 ↔ Base64
+      <span class="menu-sub">Base64 解码为图片 · 图片编码为 Base64</span>
+    </button>
+    <button class="menu-btn" data-group="text">
+      📝 文字 ↔ Base64
+      <span class="menu-sub">文字编码为 Base64 · Base64 解码为文字</span>
+    </button>
+    <button class="menu-btn" data-group="file">
+      📄 文件 ↔ Base64
+      <span class="menu-sub">文件编码为 Base64 · Base64 解码为文件 · Base64 转 PDF</span>
+    </button>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-badge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    免费在线工具
+  </div>
+  <h1><span>Base64</span> <span id="pageTitle">图片转换器</span></h1>
+  <p id="pageDesc">图片与 Base64 编码字符串之间互相转换，支持 PNG、JPG、GIF、WEBP 等格式</p>
+</header>
+
+<!-- Main -->
+<div class="container">
+
+  <!-- Sub Tabs -->
+  <div class="tabs" id="subTabs"></div>
+
+  <!-- Panel Group: Image -->
+  <div class="panel-group active" id="group-image">
+
+    <div class="tab-content active" id="panel-from-base64" role="tabpanel">
+      <div class="panel-grid-horizontal">
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            输入 Base64
+          </div>
+          <div class="input-area">
+            <textarea id="base64Input" placeholder="粘贴 Base64 编码字符串到这里…&#10;支持带 data:image 头或不带头部的纯 base64 字符串&#10;例如: /9j/4AAQSkZJRg..." rows="8"></textarea>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="decodeBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                解码预览
+              </button>
+              <button class="btn btn-secondary" id="clearFromBase64">清空</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            图片预览
+          </div>
+          <div class="decode-preview" id="decodePreview">
+            <img id="decodedImage" alt="解码后的图片" src="">
+            <div class="btn-row">
+              <button class="btn btn-primary" id="downloadBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                下载图片
+              </button>
+            </div>
+            <div class="result-meta" style="justify-content:center;margin-top:12px;margin-bottom:0;">
+              <span class="meta-tag mime" id="decodedMime">MIME: -</span>
+              <span class="meta-tag size" id="decodedSize">大小: -</span>
+            </div>
+          </div>
+          <div id="noPreview">输入 Base64 字符串后点击"解码预览"</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-content" id="panel-to-base64" role="tabpanel">
+      <div class="panel-grid">
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            上传图片
+          </div>
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="drop-zone-text">点击上传或拖拽图片到此处</div>
+            <div class="drop-zone-hint">支持 <strong>PNG</strong>、<strong>JPG</strong>、<strong>GIF</strong>、<strong>WEBP</strong>，最大 10MB</div>
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/bmp,image/tiff">
+          </div>
+
+          <div class="result-section" id="toBase64Result">
+            <div class="result-meta">
+              <span class="meta-tag mime" id="mimeTag">MIME: -</span>
+              <span class="meta-tag size" id="sizeTag">大小: -</span>
+            </div>
+            <div class="output-area">
+              <textarea id="base64Output" readonly placeholder="Base64 编码将显示在这里…" rows="3"></textarea>
+              <button class="copy-btn" id="copyBase64Btn" title="复制 Base64">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-secondary" id="clearToBase64">清空</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card snippets" id="snippetsCard">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            代码片段
+          </div>
+
+          <div class="snippet-item">
+            <div class="snippet-label">HTML &lt;img&gt; 标签</div>
+            <div class="snippet-code">
+              <pre id="snippetHtml">上传图片后自动生成…</pre>
+              <button class="copy-btn" data-snippet="html" title="复制">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="snippet-item">
+            <div class="snippet-label">CSS background-image</div>
+            <div class="snippet-code">
+              <pre id="snippetCss">上传图片后自动生成…</pre>
+              <button class="copy-btn" data-snippet="css" title="复制">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Panel Group: Text -->
+  <div class="panel-group" id="group-text">
+
+    <div class="tab-content" id="panel-text-to-base64" role="tabpanel">
+      <div class="panel-grid">
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            输入文字
+          </div>
+          <div class="input-area">
+            <textarea id="textToEncode" placeholder="在此输入要转换为 Base64 的文字…" rows="6"></textarea>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="encodeTextBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                编码为 Base64
+              </button>
+              <button class="btn btn-secondary" id="clearTextToBase64">清空</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Base64 结果
+          </div>
+          <div class="output-area">
+            <textarea id="encodedTextResult" readonly placeholder="Base64 编码结果将显示在这里…" rows="4"></textarea>
+            <button class="copy-btn" id="copyEncodedText" title="复制 Base64">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-content" id="panel-base64-to-text" role="tabpanel">
+      <div class="panel-grid">
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            输入 Base64
+          </div>
+          <div class="input-area">
+            <textarea id="base64ToDecode" placeholder="在此粘贴 Base64 字符串…" rows="6"></textarea>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="decodeTextBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                解码为文字
+              </button>
+              <button class="btn btn-secondary" id="clearBase64ToText">清空</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            解码结果
+          </div>
+          <div class="output-area">
+            <textarea id="decodedTextResult" readonly placeholder="解码后的文字将显示在这里…" rows="4"></textarea>
+            <button class="copy-btn" id="copyDecodedText" title="复制文字">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Panel Group: File -->
+  <div class="panel-group" id="group-file">
+
+<div class="tab-content active" id="panel-file-decode" role="tabpanel">
+      <div class="panel-grid">
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            输入 Base64
+          </div>
+          <div class="input-area">
+            <textarea id="fileBase64DecodeInput" placeholder="粘贴 Base64 字符串到这里…&#10;点击「解码并下载」将还原为原始文件" rows="6"></textarea>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="decodeFileBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                解码并下载
+              </button>
+              <button class="btn btn-secondary" id="clearFileDecode">清空</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            操作结果
+          </div>
+          <div class="output-area" style="text-align:center;padding:32px 16px;">
+            <div style="font-size:40px;margin-bottom:12px;">📄</div>
+            <div style="font-size:14px;color:var(--text-secondary);" id="fileDecodeStatus">等待输入…</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-content" id="panel-file-to-base64" role="tabpanel">
+      <div class="panel-grid">
+
+        <div class="card">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            上传文件
+          </div>
+          <div class="drop-zone" id="fileDropZone">
+            <div class="drop-zone-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="drop-zone-text">点击上传或拖拽文件到此处</div>
+            <div class="drop-zone-hint">支持任意文件格式，最大 20MB</div>
+            <input type="file" id="fileInputAny" accept="*/*">
+          </div>
+
+          <div class="result-section" id="fileToBase64Result">
+            <div class="result-meta">
+              <span class="meta-tag mime" id="fileMimeTag">类型: -</span>
+              <span class="meta-tag size" id="fileSizeTag">大小: -</span>
+              <span class="meta-tag size" style="background:var(--orange-dim);color:var(--orange);" id="fileNameTag">文件名: -</span>
+            </div>
+            <div class="output-area">
+              <textarea id="fileBase64Output" readonly placeholder="Base64 编码将显示在这里…" rows="4"></textarea>
+              <button class="copy-btn" id="copyFileBase64Btn" title="复制 Base64">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-secondary" id="clearFileToBase64">清空</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+          
+        </div>
+
+
+      </div>
+    </div>
+
+  </div>
+
+<footer class="footer">
+  数据仅在本地浏览器中处理，不会上传到任何服务器。
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // === DOM refs ===
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const base64Output = document.getElementById('base64Output');
+  const copyBase64Btn = document.getElementById('copyBase64Btn');
+  const clearToBase64 = document.getElementById('clearToBase64');
+  const mimeTag = document.getElementById('mimeTag');
+  const sizeTag = document.getElementById('sizeTag');
+  const toBase64Result = document.getElementById('toBase64Result');
+  const snippetsCard = document.getElementById('snippetsCard');
+  const snippetHtml = document.getElementById('snippetHtml');
+  const snippetCss = document.getElementById('snippetCss');
+
+  const base64Input = document.getElementById('base64Input');
+  const decodeBtn = document.getElementById('decodeBtn');
+  const clearFromBase64 = document.getElementById('clearFromBase64');
+  const decodedImage = document.getElementById('decodedImage');
+  const decodePreview = document.getElementById('decodePreview');
+  const noPreview = document.getElementById('noPreview');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const decodedMime = document.getElementById('decodedMime');
+  const decodedSize = document.getElementById('decodedSize');
+
+  const toast = document.getElementById('toast');
+  let toastTimer = null;
+
+  // Current state
+  let currentBase64 = '';
+  let currentMime = '';
+  let currentFileName = 'image';
+
+  // === Toast ===
+  function showToast(msg, type = 'success') {
+    toast.textContent = msg;
+    toast.className = 'toast ' + type + ' show';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+    const tabBtns = document.querySelectorAll('#subTabs .tab-btn');
+  const tabContents = {
+    'from-base64': document.getElementById('panel-from-base64'),
+    'to-base64': document.getElementById('panel-to-base64'),
+    'text-to-base64': document.getElementById('panel-text-to-base64'),
+    'base64-to-text': document.getElementById('panel-base64-to-text'),
+    'file-to-base64': document.getElementById('panel-file-to-base64'),
+    'file-decode': document.getElementById('panel-file-decode'),
+  };
+  const panelGroups = {
+    image: document.getElementById('group-image'),
+    text: document.getElementById('group-text'),
+    file: document.getElementById('group-file'),
+  };
+  const menuBtns = document.querySelectorAll('.menu-btn');
+  const subTabs = document.getElementById('subTabs');
+
+  const groupConfig = {
+    image: { tabs: [
+      { id: 'from-base64', label: '🔤 Base64 → 图片' },
+      { id: 'to-base64', label: '🖼 图片 → Base64' },
+    ]},
+    text: { tabs: [
+      { id: 'text-to-base64', label: '📝 文字 → Base64' },
+      { id: 'base64-to-text', label: '🔓 Base64 → 文字' },
+    ]},
+    file: { tabs: [
+      { id: 'file-decode', label: '🔓 Base64 → 文件' },
+      { id: 'file-to-base64', label: '📄 文件 → Base64' },
+    ]},
+  };
+
+  let activeGroup = 'image';
+  let activeSubTab = 'from-base64';
+
+  function renderSubTabs(group) {
+    const config = groupConfig[group];
+    subTabs.innerHTML = config.tabs.map(t =>
+            `<button class="tab-btn${t.id === activeSubTab ? ' active' : ''}" data-tab="${t.id}">${t.label}</button>`
+    ).join('');
+    // Bind sub-tab clicks
+    subTabs.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchSubTab(btn.dataset.tab));
+    });
+  }
+
+  function switchGroup(group) {
+    activeGroup = group;
+    // Activate menu
+    menuBtns.forEach(b => b.classList.toggle('active', b.dataset.group === group));
+    // Show/hide panel groups
+    Object.entries(panelGroups).forEach(([key, el]) => {
+      el.classList.toggle('active', key === group);
+    });
+    // Update header
+    const headerMap = {
+      image: { title: '图片转换器', desc: '图片与 Base64 编码字符串之间互相转换，支持 PNG、JPG、GIF、WEBP 等格式' },
+      text: { title: '文字转换器', desc: '文字与 Base64 编码字符串之间互相转换，支持中文、英文及所有 Unicode 字符' },
+      file: { title: '文件转换器', desc: '任意文件与 Base64 编码字符串之间互相转换，支持 PDF/图片/ZIP 等格式' },
+    };
+    const h = headerMap[group];
+    if (h) {
+      document.getElementById('pageTitle').textContent = h.title;
+      document.getElementById('pageDesc').textContent = h.desc;
+    }
+    // Reset to first sub-tab of the group
+    activeSubTab = groupConfig[group].tabs[0].id;
+    renderSubTabs(group);
+    // Show the correct tab content within the group
+    Object.entries(tabContents).forEach(([key, el]) => {
+      el.classList.toggle('active', key === activeSubTab);
+    });
+  }
+
+  function switchSubTab(tabId) {
+    activeSubTab = tabId;
+    renderSubTabs(activeGroup);
+    Object.entries(tabContents).forEach(([key, el]) => {
+      el.classList.toggle('active', key === tabId);
+    });
+  }
+
+  // Bind main menu clicks
+  menuBtns.forEach(btn => {
+    btn.addEventListener('click', () => switchGroup(btn.dataset.group));
+  });
+
+// Init
+  switchGroup('image');
+
+  // === File size formatting ===
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(2) + ' MB';
+  }
+
+  // === Read file as base64 ===
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('文件读取失败'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // === Handle image file ===
+  async function handleFile(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('请选择图片文件', 'error');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('图片大小不能超过 10MB', 'error');
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToBase64(file);
+      currentBase64 = dataUrl;
+      currentMime = file.type;
+      currentFileName = file.name.replace(/\.[^.]+$/, '') || 'image';
+
+      // Show preview in drop zone
+      dropZone.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'preview-wrap';
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.alt = '预览';
+      wrap.appendChild(img);
+      const rmBtn = document.createElement('button');
+      rmBtn.className = 'remove-btn';
+      rmBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      rmBtn.title = '移除';
+      rmBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetToBase64();
+      });
+      wrap.appendChild(rmBtn);
+      dropZone.appendChild(wrap);
+      dropZone.classList.add('has-image');
+
+      // Show output
+      const raw = dataUrl.split(',')[1] || dataUrl;
+      base64Output.value = raw;
+      mimeTag.textContent = 'MIME: ' + file.type;
+      sizeTag.textContent = '大小: ' + formatSize(file.size);
+
+      toBase64Result.classList.add('visible');
+      snippetsCard.classList.add('visible');
+
+      // Update snippets
+      snippetHtml.textContent = '<img src="' + dataUrl + '" alt="image" />';
+      snippetCss.textContent = 'background-image: url("' + dataUrl + '");';
+
+      showToast('图片转换成功！');
+    } catch (err) {
+      showToast(err.message || '转换失败', 'error');
+    }
+  }
+
+  // === Reset Image→Base64 ===
+  function resetToBase64() {
+    dropZone.innerHTML = `
+      <div class="drop-zone-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="drop-zone-text">点击上传或拖拽图片到此处</div>
+      <div class="drop-zone-hint">支持 <strong>PNG</strong>、<strong>JPG</strong>、<strong>GIF</strong>、<strong>WEBP</strong>，最大 10MB</div>
+    `;
+    dropZone.appendChild(fileInput);
+    dropZone.classList.remove('has-image');
+    fileInput.value = '';
+    base64Output.value = '';
+    mimeTag.textContent = 'MIME: -';
+    sizeTag.textContent = '大小: -';
+    toBase64Result.classList.remove('visible');
+    snippetsCard.classList.remove('visible');
+    snippetHtml.textContent = '上传图片后自动生成…';
+    snippetCss.textContent = '上传图片后自动生成…';
+    currentBase64 = '';
+    currentMime = '';
+    currentFileName = 'image';
+  }
+
+  // === Drop zone events ===
+  dropZone.addEventListener('click', (e) => {
+    if (dropZone.classList.contains('has-image')) return;
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) handleFile(fileInput.files[0]);
+  });
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+
+  // Paste on drop zone
+  dropZone.addEventListener('paste', (e) => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) handleFile(file);
+        break;
+      }
+    }
+  });
+
+  // === Copy base64 ===
+  copyBase64Btn.addEventListener('click', async () => {
+    const text = base64Output.value;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBase64Btn.classList.add('copied');
+      copyBase64Btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      showToast('Base64 已复制到剪贴板');
+      setTimeout(() => {
+        copyBase64Btn.classList.remove('copied');
+        copyBase64Btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      }, 2000);
+    } catch {
+      showToast('复制失败，请手动选择复制', 'error');
+    }
+  });
+
+  clearToBase64.addEventListener('click', resetToBase64);
+
+  // === Copy snippets ===
+  document.querySelectorAll('.snippet-code .copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const snippet = btn.dataset.snippet;
+      const text = snippet === 'html' ? snippetHtml.textContent : snippetCss.textContent;
+      if (!text || text === '上传图片后自动生成…') return;
+      try {
+        await navigator.clipboard.writeText(text);
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+        showToast('代码片段已复制');
+        setTimeout(() => { btn.innerHTML = orig; }, 1500);
+      } catch {
+        showToast('复制失败', 'error');
+      }
+    });
+  });
+
+  // === Base64 → Image ===
+  function decodeBase64(str) {
+    let cleaned = str.trim();
+
+    // 1. 如果包含 data:image 头，直接提取
+    const match = cleaned.match(/^data:image\/(\w+);base64,(.+)$/i);
+    if (match) {
+      const mime = 'image/' + match[1].toLowerCase().replace('jpg', 'jpeg');
+      cleaned = match[2].replace(/\s/g, '');
+      const dataUrl = 'data:' + mime + ';base64,' + cleaned;
+      return { dataUrl, mime, raw: cleaned };
+    }
+
+    // 2. 没有 data: 头，清除所有空白字符，尝试识别
+    cleaned = cleaned.replace(/\s/g, '');
+
+    // 3. 验证是否为合法 base64
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned)) {
+      throw new Error('无效的 Base64 字符串');
+    }
+
+    // 4. 通过文件头魔数检测图片格式
+    let mime = 'image/png'; // 默认
+    try {
+      const raw = atob(cleaned.substring(0, 8));
+      const bytes = [];
+      for (let i = 0; i < raw.length; i++) {
+        bytes.push(raw.charCodeAt(i) & 0xFF);
+      }
+      // JPEG: FF D8 FF
+      if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+        mime = 'image/jpeg';
+      }
+      // PNG: 89 50 4E 47
+      else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+        mime = 'image/png';
+      }
+      // GIF: 47 49 46 38
+      else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+        mime = 'image/gif';
+      }
+      // WEBP (RIFF .... WEBP): 52 49 46 46 .... 57 45 42 50
+      else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+               raw.length >= 12 && raw.charCodeAt(8) === 0x57 && raw.charCodeAt(9) === 0x45 &&
+               raw.charCodeAt(10) === 0x42 && raw.charCodeAt(11) === 0x50) {
+        mime = 'image/webp';
+      }
+      // BMP: 42 4D
+      else if (bytes[0] === 0x42 && bytes[1] === 0x4D) {
+        mime = 'image/bmp';
+      }
+      // TIFF: 49 49 2A 00 或 4D 4D 00 2A
+      else if ((bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2A && bytes[3] === 0x00) ||
+               (bytes[0] === 0x4D && bytes[1] === 0x4D && bytes[2] === 0x00 && bytes[3] === 0x2A)) {
+        mime = 'image/tiff';
+      }
+    } catch (e) {
+      // atob 失败时保持默认 mime
+    }
+
+    // 5. 自动补全 data:image/xxx;base64, 头
+    const dataUrl = 'data:' + mime + ';base64,' + cleaned;
+    return { dataUrl, mime, raw: cleaned };
+  }
+
+  decodeBtn.addEventListener('click', () => {
+    const input = base64Input.value.trim();
+    if (!input) {
+      showToast('请输入 Base64 字符串', 'error');
+      return;
+    }
+
+    try {
+      const { dataUrl, mime, raw } = decodeBase64(input);
+
+      decodedImage.src = dataUrl;
+      decodedImage.onload = () => {
+        decodePreview.classList.add('visible');
+        noPreview.style.display = 'none';
+
+        decodedMime.textContent = 'MIME: ' + mime;
+
+        // Approximate size from base64 length
+        const byteSize = Math.round((raw.length * 3) / 4 - (raw.endsWith('==') ? 2 : raw.endsWith('=') ? 1 : 0));
+        decodedSize.textContent = '大小: ' + formatSize(byteSize);
+
+        showToast('解码成功！');
+      };
+      decodedImage.onerror = () => {
+        showToast('图片解码失败，请检查 Base64 字符串是否有效', 'error');
+      };
+    } catch (err) {
+      showToast(err.message || '解码失败', 'error');
+    }
+  });
+
+  // Enter key to decode
+  base64Input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      decodeBtn.click();
+    }
+  });
+
+  clearFromBase64.addEventListener('click', () => {
+    base64Input.value = '';
+    decodedImage.src = '';
+    decodePreview.classList.remove('visible');
+    noPreview.style.display = 'block';
+    decodedMime.textContent = 'MIME: -';
+    decodedSize.textContent = '大小: -';
+  });
+
+  // === Download decoded image ===
+  downloadBtn.addEventListener('click', () => {
+    const src = decodedImage.src;
+    if (!src || src === '') {
+      showToast('没有可下载的图片', 'error');
+      return;
+    }
+
+    const mimeMatch = src.match(/^data:image\/(\w+);/);
+    const ext = mimeMatch ? mimeMatch[1].replace('jpeg', 'jpg') : 'png';
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = 'decoded-image.' + ext;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('图片已开始下载');
+  });
+
+  // === Paste event: auto-decode when pasting base64 ===
+  base64Input.addEventListener('paste', () => {
+    // Small delay to let the value update
+    setTimeout(() => {
+      const val = base64Input.value.trim();
+      if (val && (val.startsWith('data:image') || /^[A-Za-z0-9+/]{20,}={0,2}$/.test(val))) {
+        // Auto-decode if it looks like a base64 image string
+        decodeBtn.click();
+      }
+    }, 50);
+  });
+
+  // === Global paste: support pasting image anywhere on the page ===
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          // Switch to image→base64 tab
+          switchGroup('image');
+          switchSubTab('to-base64');
+          handleFile(file);
+        }
+        break;
+      }
+    }
+  });
+
+  // === Text → Base64 ===
+  function encodeTextToBase64(text) {
+    try {
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(text);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    } catch (e) {
+      // Fallback for older browsers
+      return btoa(unescape(encodeURIComponent(text)));
+    }
+  }
+
+  encodeTextBtn.addEventListener('click', () => {
+    const text = textToEncode.value;
+    if (!text) {
+      showToast('请输入要编码的文字', 'error');
+      return;
+    }
+    try {
+      encodedTextResult.value = encodeTextToBase64(text);
+      showToast('编码成功！');
+    } catch (err) {
+      showToast('编码失败：' + err.message, 'error');
+    }
+  });
+
+  clearTextToBase64.addEventListener('click', () => {
+    textToEncode.value = '';
+    encodedTextResult.value = '';
+  });
+
+  copyEncodedText.addEventListener('click', async () => {
+    const text = encodedTextResult.value;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyEncodedText.classList.add('copied');
+      copyEncodedText.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      showToast('Base64 已复制到剪贴板');
+      setTimeout(() => {
+        copyEncodedText.classList.remove('copied');
+        copyEncodedText.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      }, 2000);
+    } catch {
+      showToast('复制失败', 'error');
+    }
+  });
+
+  // Ctrl+Enter to encode text
+  textToEncode.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      encodeTextBtn.click();
+    }
+  });
+
+  // === Base64 → Text ===
+  function decodeBase64ToText(str) {
+    const cleaned = str.replace(/\s/g, '');
+    try {
+      const binary = atob(cleaned);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    } catch (e) {
+      // Fallback
+      try {
+        return decodeURIComponent(escape(atob(cleaned)));
+      } catch (e2) {
+        throw new Error('Base64 字符串无效或不是文字编码');
+      }
+    }
+  }
+
+  decodeTextBtn.addEventListener('click', () => {
+    const input = base64ToDecode.value.trim();
+    if (!input) {
+      showToast('请输入 Base64 字符串', 'error');
+      return;
+    }
+    try {
+      const result = decodeBase64ToText(input);
+      decodedTextResult.value = result;
+      showToast('解码成功！');
+    } catch (err) {
+      showToast(err.message || '解码失败', 'error');
+    }
+  });
+
+  clearBase64ToText.addEventListener('click', () => {
+    base64ToDecode.value = '';
+    decodedTextResult.value = '';
+  });
+
+  copyDecodedText.addEventListener('click', async () => {
+    const text = decodedTextResult.value;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyDecodedText.classList.add('copied');
+      copyDecodedText.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      showToast('文字已复制到剪贴板');
+      setTimeout(() => {
+        copyDecodedText.classList.remove('copied');
+        copyDecodedText.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      }, 2000);
+    } catch {
+      showToast('复制失败', 'error');
+    }
+  });
+
+  // Ctrl+Enter to decode text base64
+  base64ToDecode.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      decodeTextBtn.click();
+    }
+  });
+
+  // Auto-detect paste for base64→text panel
+  base64ToDecode.addEventListener('paste', () => {
+    setTimeout(() => {
+      const val = base64ToDecode.value.trim();
+      if (val && /^[A-Za-z0-9+/]*={0,2}$/.test(val.replace(/\s/g, ''))) {
+        decodeTextBtn.click();
+      }
+    }, 50);
+  });
+
+  // ==================== 文件 ↔ Base64 ====================
+
+  const fileDropZone = document.getElementById('fileDropZone');
+  const fileInputAny = document.getElementById('fileInputAny');
+  const fileBase64Output = document.getElementById('fileBase64Output');
+  const copyFileBase64Btn = document.getElementById('copyFileBase64Btn');
+  const clearFileToBase64 = document.getElementById('clearFileToBase64');
+  const fileMimeTag = document.getElementById('fileMimeTag');
+  const fileSizeTag = document.getElementById('fileSizeTag');
+  const fileNameTag = document.getElementById('fileNameTag');
+  const fileToBase64Result = document.getElementById('fileToBase64Result');
+
+  const fileBase64DecodeInput = document.getElementById('fileBase64DecodeInput');
+  const decodeFileBtn = document.getElementById('decodeFileBtn');
+  const clearFileDecode = document.getElementById('clearFileDecode');
+  const fileDecodeStatus = document.getElementById('fileDecodeStatus');
+
+  let currentFileData = null; // { name, type, size, dataUrl }
+
+  function resetFileToBase64() {
+    fileDropZone.innerHTML = `
+      <div class="drop-zone-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="drop-zone-text">点击上传或拖拽文件到此处</div>
+      <div class="drop-zone-hint">支持任意文件格式，最大 20MB</div>
+    `;
+    fileDropZone.appendChild(fileInputAny);
+    fileDropZone.classList.remove('has-image');
+    fileInputAny.value = '';
+    fileBase64Output.value = '';
+    fileMimeTag.textContent = '类型: -';
+    fileSizeTag.textContent = '大小: -';
+    fileNameTag.textContent = '文件名: -';
+    fileToBase64Result.classList.remove('visible');
+    currentFileData = null;
+  }
+
+  async function handleAnyFile(file) {
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('文件大小不能超过 20MB', 'error');
+      return;
+    }
+
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsDataURL(file);
+      });
+
+      currentFileData = { name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataUrl };
+
+      // Show file info in drop zone
+      const ext = file.name.split('.').pop() || 'file';
+      const iconSvg = file.type.startsWith('image/')
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+      fileDropZone.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'text-align:center;padding:16px;';
+      wrap.innerHTML = '<div style="font-size:40px;margin-bottom:8px;">📄</div>'
+        + '<div style="font-size:14px;font-weight:600;word-break:break-all;">' + file.name + '</div>'
+        + '<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">' + (file.type || '未知类型') + ' · ' + formatSize(file.size) + '</div>';
+      const rmBtn = document.createElement('button');
+      rmBtn.className = 'remove-btn';
+      rmBtn.style.cssText = 'position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+      rmBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      rmBtn.title = '移除';
+      rmBtn.addEventListener('click', (e) => { e.stopPropagation(); resetFileToBase64(); });
+      wrap.appendChild(rmBtn);
+      fileDropZone.appendChild(wrap);
+      fileDropZone.classList.add('has-image');
+
+      // Show base64 output
+      const raw = dataUrl.split(',')[1] || dataUrl;
+      fileBase64Output.value = raw;
+      fileMimeTag.textContent = '类型: ' + (file.type || 'application/octet-stream');
+      fileSizeTag.textContent = '大小: ' + formatSize(file.size);
+      fileNameTag.textContent = '文件名: ' + file.name;
+      fileToBase64Result.classList.add('visible');
+      showToast('文件已转换为 Base64');
+    } catch (err) {
+      showToast(err.message || '转换失败', 'error');
+    }
+  }
+
+  // File drop zone events
+  fileDropZone.addEventListener('click', (e) => {
+    if (fileDropZone.classList.contains('has-image')) return;
+    fileInputAny.click();
+  });
+  fileInputAny.addEventListener('change', () => {
+    if (fileInputAny.files.length) handleAnyFile(fileInputAny.files[0]);
+  });
+  fileDropZone.addEventListener('dragover', (e) => { e.preventDefault(); fileDropZone.classList.add('dragover'); });
+  fileDropZone.addEventListener('dragleave', () => { fileDropZone.classList.remove('dragover'); });
+  fileDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileDropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleAnyFile(e.dataTransfer.files[0]);
+  });
+
+  // Copy file base64
+  copyFileBase64Btn.addEventListener('click', async () => {
+    const text = fileBase64Output.value;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyFileBase64Btn.classList.add('copied');
+      copyFileBase64Btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+      showToast('Base64 已复制到剪贴板');
+      setTimeout(() => {
+        copyFileBase64Btn.classList.remove('copied');
+        copyFileBase64Btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      }, 2000);
+    } catch { showToast('复制失败', 'error'); }
+  });
+  clearFileToBase64.addEventListener('click', resetFileToBase64);
+
+  // Decode base64 → file download
+  decodeFileBtn.addEventListener('click', () => {
+    const input = fileBase64DecodeInput.value.trim();
+    if (!input) { showToast('请输入 Base64 字符串', 'error'); return; }
+
+    try {
+      let cleaned = input;
+      // Remove data URL header if present
+      const headerMatch = cleaned.match(/^data:([^;]+);base64,(.+)$/i);
+      let mime = 'application/octet-stream';
+      if (headerMatch) {
+        mime = headerMatch[1];
+        cleaned = headerMatch[2];
+      }
+      cleaned = cleaned.replace(/\s/g, '');
+
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned)) {
+        throw new Error('无效的 Base64 字符串');
+      }
+
+      // Detect mime from magic bytes for common types
+      try {
+        const raw = atob(cleaned.substring(0, 8));
+        const bytes = [];
+        for (let i = 0; i < raw.length; i++) bytes.push(raw.charCodeAt(i) & 0xFF);
+        if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) mime = 'application/pdf';
+        else if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) mime = 'image/jpeg';
+        else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) mime = 'image/png';
+        else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) mime = 'image/gif';
+        else if (bytes[0] === 0x50 && bytes[1] === 0x4B) mime = 'application/zip';
+      } catch (e) { /* keep default */ }
+
+      const binary = atob(cleaned);
+      const u8arr = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) u8arr[i] = binary.charCodeAt(i);
+      const blob = new Blob([u8arr], { type: mime });
+
+      // Try to guess extension
+      const extMap = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'application/zip': 'zip' };
+      const ext = extMap[mime] || 'bin';
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'decoded-file.' + ext;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      fileDecodeStatus.textContent = '✅ 已下载: decoded-file.' + ext + ' (' + formatSize(blob.size) + ')';
+      fileDecodeStatus.style.color = 'var(--green)';
+      showToast('文件解码成功，已开始下载');
+    } catch (err) {
+      fileDecodeStatus.textContent = '❌ ' + (err.message || '解码失败');
+      fileDecodeStatus.style.color = 'var(--red)';
+      showToast(err.message || '解码失败', 'error');
+    }
+  });
+  clearFileDecode.addEventListener('click', () => {
+    fileBase64DecodeInput.value = '';
+    fileDecodeStatus.textContent = '等待输入…';
+    fileDecodeStatus.style.color = 'var(--text-muted)';
+  });
+
+  // === Keyboard shortcuts ===
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (tabContents['to-base64'].classList.contains('active')) {
+        resetToBase64();
+      } else if (tabContents['from-base64'].classList.contains('active')) {
+        clearFromBase64.click();
+      } else if (tabContents['text-to-base64'].classList.contains('active')) {
+        clearTextToBase64.click();
+      } else if (tabContents['base64-to-text'].classList.contains('active')) {
+        clearBase64ToText.click();
+      } else if (tabContents['file-to-base64'].classList.contains('active')) {
+        resetFileToBase64();
+      } else if (tabContents['file-decode'].classList.contains('active')) {
+        clearFileDecode.click();
+      }
+    }
+  });
+
+  console.log('Base64 Converter loaded. Ctrl+Enter to encode/decode, Escape to clear.');
+})();
+</script>
+</body>
+</html>
