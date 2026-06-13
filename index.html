@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工具导航站</title>
+<style>
+  :root {
+    --bg: #0d0d12;
+    --bg-card: #16161e;
+    --bg-card-hover: #1c1c28;
+    --bg-surface: #1e1e2a;
+    --border: #2a2a3a;
+    --border-light: #35354a;
+    --text: #eeeef0;
+    --text-secondary: #9090a8;
+    --text-muted: #5c5c72;
+    --accent: #f0a84c;
+    --accent-dim: rgba(240, 168, 76, 0.12);
+    --accent-glow: rgba(240, 168, 76, 0.2);
+    --green: #4cd97a;
+    --green-dim: rgba(76, 217, 122, 0.12);
+    --red: #f06060;
+    --red-dim: rgba(240, 96, 96, 0.12);
+    --blue: #60a5fa;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-xs: 6px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 15% 20%, rgba(240, 168, 76, 0.04), transparent),
+      radial-gradient(ellipse 60% 40% at 85% 80%, rgba(96, 165, 250, 0.03), transparent);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ===== Header ===== */
+  .header {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), #d4893a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0d0d12;
+    flex-shrink: 0;
+  }
+
+  .logo-text h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+
+  .logo-text p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .search-wrap input {
+    width: 220px;
+    padding: 9px 14px 9px 36px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    transition: var(--transition);
+    outline: none;
+  }
+
+  .search-wrap input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+    width: 260px;
+  }
+
+  .search-wrap input::placeholder { color: var(--text-muted); }
+
+  /* ===== Categories ===== */
+  .categories-bar {
+    max-width: 1200px;
+    margin: 28px auto 0;
+    padding: 0 24px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .cat-btn {
+    padding: 8px 18px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+
+  .cat-btn:hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+  }
+
+  .cat-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .cat-btn .count {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .cat-btn.active .count {
+    background: rgba(240, 168, 76, 0.2);
+    color: var(--accent);
+  }
+
+  /* ===== Tool Grid ===== */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 24px 80px;
+  }
+
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .tool-grid.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    grid-template-columns: 1fr;
+  }
+
+  .empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .empty-icon svg { width: 28px; height: 28px; color: var(--accent); }
+
+  .empty-text { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .empty-hint { font-size: 13px; color: var(--text-muted); }
+
+  /* Card */
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: var(--transition);
+    position: relative;
+    animation: cardIn 0.35s ease both;
+    cursor: pointer;
+  }
+
+  .tool-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tool-card:nth-child(1) { animation-delay: 0.00s; }
+  .tool-card:nth-child(2) { animation-delay: 0.03s; }
+  .tool-card:nth-child(3) { animation-delay: 0.06s; }
+  .tool-card:nth-child(4) { animation-delay: 0.09s; }
+  .tool-card:nth-child(5) { animation-delay: 0.12s; }
+  .tool-card:nth-child(6) { animation-delay: 0.15s; }
+  .tool-card:nth-child(7) { animation-delay: 0.18s; }
+  .tool-card:nth-child(8) { animation-delay: 0.21s; }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .card-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 11px;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: var(--transition);
+  }
+
+  .tool-card:hover .card-actions { opacity: 1; }
+
+  .card-action-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+  }
+
+  .card-action-btn:hover { background: var(--bg-surface); }
+  .card-action-btn.edit:hover { color: var(--accent); }
+  .card-action-btn.delete:hover { color: var(--red); }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-cat-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #0d0d12;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+  }
+
+  .card-link:hover {
+    background: #f5b85e;
+    box-shadow: 0 2px 12px var(--accent-glow);
+  }
+
+  .card-link svg { width: 14px; height: 14px; }
+
+  /* ===== FAB ===== */
+  .fab {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), #d4893a);
+    color: #0d0d12;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(240, 168, 76, 0.35);
+    transition: var(--transition);
+    z-index: 100;
+  }
+
+  .fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 28px rgba(240, 168, 76, 0.45);
+  }
+
+  .fab svg { width: 24px; height: 24px; }
+
+  /* ===== Modal ===== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    margin-bottom: 24px;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    transition: var(--transition);
+    outline: none;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .form-group textarea { resize: vertical; min-height: 60px; }
+
+  .form-group select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235c5c72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  .form-group select option { background: var(--bg-card); color: var(--text); }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  .btn {
+    padding: 10px 22px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0d0d12;
+  }
+
+  .btn-primary:hover {
+    background: #f5b85e;
+    box-shadow: 0 2px 12px var(--accent-glow);
+  }
+
+  .btn-secondary {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-card-hover);
+    color: var(--text);
+  }
+
+  .btn-danger {
+    background: var(--red);
+    color: #fff;
+  }
+
+  /* ===== Toast ===== */
+  .toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+  .toast .toast-icon { font-size: 16px; }
+
+  @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(50px); } }
+
+  /* ===== Empty state for category ===== */
+  /* ===== Footer ===== */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .header { padding-top: 28px; flex-direction: column; align-items: stretch; }
+    .header-left { justify-content: center; }
+    .header-actions { justify-content: center; }
+    .search-wrap input { width: 100%; }
+    .search-wrap input:focus { width: 100%; }
+    .categories-bar { justify-content: center; }
+    .tool-grid { grid-template-columns: 1fr; }
+    .fab { bottom: 20px; right: 20px; width: 50px; height: 50px; }
+    .modal { padding: 24px; }
+  }
+
+  @media (max-width: 480px) {
+    .logo-text h1 { font-size: 22px; }
+    .cat-btn { font-size: 12px; padding: 6px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-icon">⚒</div>
+    <div class="logo-text">
+      <h1>工具导航</h1>
+      <p>收集 · 管理 · 快速访问</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="搜索工具…" autocomplete="off">
+    </div>
+  </div>
+</header>
+
+<!-- Categories -->
+<div class="categories-bar" id="categoriesBar"></div>
+
+<!-- Grid -->
+<div class="container">
+  <div class="tool-grid" id="toolGrid"></div>
+</div>
+
+<!-- FAB (removed - local files only, no manual add) -->
+
+<!-- Modal (removed) -->
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<footer class="footer">
+  数据存储在浏览器本地 · 随时管理你的工具集
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // === Default data ===
+  const DEFAULT_CATEGORIES = [
+    { id: 'convert', name: '转换工具', icon: '🔄' },
+    { id: 'dev', name: '开发工具', icon: '💻' },
+  ];
+
+  let MANIFEST_TOOLS = [];
+
+  // === 检测是否为本地文件 ===
+  function isLocalUrl(url) {
+    return url && !url.startsWith('http') && !url.startsWith('//') && !url.startsWith('https');
+  }
+
+  // 离线回退
+  const FALLBACK_TOOLS = [
+    { id: 'fb1', name: 'Base64转换器', url: 'base64-image-converter.html', desc: 'Base64 与图片互转、Base64 与文字互转，支持拖拽上传、粘贴截图、自动解码', icon: '🖼️', category: 'convert' },
+    { id: 'fb2', name: '签名生成工具', url: 'signature-tool.html', desc: '报文签名值计算，JSON 参数 ASCII 排序后 HMAC + Base64 签名', icon: '🔐', category: 'convert' },
+    { id: 'fb3', name: '开发者工具箱', url: 'dev-toolkit.html', desc: 'URL编解码、JSON转义/格式化、XML格式化、时间戳互转、UUID生成、文字转二维码', icon: '🧰', category: 'dev' },
+	{"id":"t2c","name":"电子发票加解密(博思)","url":"einvoice-bosi.html","desc":"博思电子发票接口签名/验签，BASE64+MD5 签名算法，支持加密签名与解密验签","icon":"🧾","category":"convert"},
+  ];
+
+  // === 从 tools.json 加载清单（读取同级目录下所有 HTML 工具） ===
+  async function fetchToolsJson() {
+    try {
+      const res = await fetch('tools.json?' + Date.now());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      MANIFEST_TOOLS = (await res.json()).filter(t => isLocalUrl(t.url));
+    } catch (e) {
+      console.warn('tools.json 加载失败，使用内嵌回退清单', e.message);
+      MANIFEST_TOOLS = [...FALLBACK_TOOLS];
+    }
+  }
+
+  // === State ===
+  let categories = [];
+  let tools = [];
+  let currentCategory = 'all';
+  let searchQuery = '';
+
+  // === DOM refs ===
+  const categoriesBar = document.getElementById('categoriesBar');
+  const toolGrid = document.getElementById('toolGrid');
+  const searchInput = document.getElementById('searchInput');
+  const toastContainer = document.getElementById('toastContainer');
+
+  // === Storage ===
+  function loadData() {
+    try {
+      const saved = localStorage.getItem('nav_categories');
+      categories = saved ? JSON.parse(saved) : [...DEFAULT_CATEGORIES];
+      tools = [...MANIFEST_TOOLS];
+    } catch {
+      categories = [...DEFAULT_CATEGORIES];
+      tools = [...MANIFEST_TOOLS];
+    }
+  }
+
+  function saveData() {
+    localStorage.setItem('nav_categories', JSON.stringify(categories));
+  }
+
+  // === Toast ===
+  function showToast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    const icons = { success: '✓', error: '✕' };
+    el.innerHTML = `<span class="toast-icon">${icons[type] || '•'}</span> ${msg}`;
+    toastContainer.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 2600);
+  }
+
+  // === Render ===
+  function renderCategories() {
+    let html = `<button class="cat-btn${currentCategory === 'all' ? ' active' : ''}" data-cat="all">全部 <span class="count">${tools.length}</span></button>`;
+    categories.forEach(cat => {
+      const count = tools.filter(t => t.category === cat.id).length;
+      html += `<button class="cat-btn${currentCategory === cat.id ? ' active' : ''}" data-cat="${cat.id}">${cat.icon} ${cat.name} <span class="count">${count}</span></button>`;
+    });
+    // Add manage categories button
+    html += `<button class="cat-btn" id="manageCatsBtn" style="color:var(--text-muted);border-style:dashed;">⚙ 管理分类</button>`;
+    categoriesBar.innerHTML = html;
+
+    // Bind category clicks
+    categoriesBar.querySelectorAll('.cat-btn[data-cat]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentCategory = btn.dataset.cat;
+        renderCategories();
+        renderGrid();
+      });
+    });
+
+    document.getElementById('manageCatsBtn').addEventListener('click', openCategoryManager);
+  }
+
+  function renderGrid() {
+    let filtered = tools;
+    if (currentCategory !== 'all') {
+      filtered = filtered.filter(t => t.category === currentCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(t =>
+        t.name.toLowerCase().includes(q) ||
+        t.desc.toLowerCase().includes(q)
+      );
+    }
+
+    if (filtered.length === 0) {
+      toolGrid.className = 'tool-grid empty-state';
+      toolGrid.innerHTML = `
+        <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <div class="empty-text">没有找到工具</div>
+        <div class="empty-hint">${searchQuery ? '试试其他关键词' : '当前分类下没有工具'}</div>
+      `;
+      return;
+    }
+
+    toolGrid.className = 'tool-grid';
+    const catMap = {};
+    categories.forEach(c => catMap[c.id] = c);
+
+    toolGrid.innerHTML = filtered.map(tool => {
+      const cat = catMap[tool.category] || { name: '未分类', icon: '📁' };
+      return `
+        <div class="tool-card" data-id="${tool.id}">
+          <div class="card-top">
+            <div class="card-icon">${tool.icon ? (tool.icon.startsWith('http') ? `<img src="${tool.icon}" alt="">` : tool.icon) : '🔗'}</div>
+          </div>
+          <div class="card-title">${tool.name}</div>
+          <div class="card-desc">${tool.desc || '暂无描述'}</div>
+          <div class="card-footer">
+            <span class="card-cat-tag">${cat.icon} ${cat.name}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Click card to open link
+    toolGrid.querySelectorAll('.tool-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const toolId = card.dataset.id;
+        const tool = tools.find(t => t.id === toolId);
+        if (tool && tool.url) {
+          window.open(tool.url, '_blank');
+        }
+      });
+    });
+  }
+
+  // === Category Manager ===
+  function openCategoryManager() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay open';
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:520px;">
+        <div class="modal-title">管理分类</div>
+        <div id="catList" style="margin-bottom:20px;"></div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <input type="text" id="newCatName" placeholder="分类名称" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-family:Inter;font-size:14px;outline:none;">
+          <input type="text" id="newCatIcon" placeholder="图标 Emoji" style="width:60px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-family:Inter;font-size:14px;text-align:center;outline:none;">
+          <button class="btn btn-primary" id="addCatBtn">添加</button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="closeCatMgr">完成</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    function renderCatList() {
+      const list = overlay.querySelector('#catList');
+      if (categories.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:14px;">暂无分类</div>';
+        return;
+      }
+      list.innerHTML = categories.map((cat, i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-surface);border-radius:10px;margin-bottom:8px;border:1px solid var(--border);">
+          <span style="font-size:20px;">${cat.icon || '📁'}</span>
+          <span style="flex:1;font-weight:600;">${cat.name}</span>
+          <span style="font-size:12px;color:var(--text-muted);">${tools.filter(t=>t.category===cat.id).length} 个工具</span>
+          <button class="del-cat-btn" data-id="${cat.id}" style="width:30px;height:30px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;" title="删除分类">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('.del-cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const catId = btn.dataset.id;
+          const refCount = tools.filter(t => t.category === catId).length;
+          if (refCount > 0 && !confirm(`分类下有 ${refCount} 个工具，删除后这些工具将变为"未分类"。确定删除吗？`)) return;
+          // Move tools to first available category or unset
+          const otherCat = categories.find(c => c.id !== catId);
+          tools.forEach(t => { if (t.category === catId) t.category = otherCat ? otherCat.id : ''; });
+          categories = categories.filter(c => c.id !== catId);
+          saveData();
+          renderCatList();
+          renderCategories();
+          renderGrid();
+          showToast('分类已删除');
+        });
+      });
+    }
+
+    overlay.querySelector('#addCatBtn').addEventListener('click', () => {
+      const name = overlay.querySelector('#newCatName').value.trim();
+      const icon = overlay.querySelector('#newCatIcon').value.trim() || '📁';
+      if (!name) { showToast('请输入分类名称', 'error'); return; }
+      const id = 'cat_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      categories.push({ id, name, icon });
+      saveData();
+      overlay.querySelector('#newCatName').value = '';
+      overlay.querySelector('#newCatIcon').value = '';
+      renderCatList();
+      renderCategories();
+      renderGrid();
+      showToast(`已添加分类「${name}」`);
+    });
+
+    overlay.querySelector('#closeCatMgr').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    renderCatList();
+  }
+
+  // === Search ===
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value;
+    renderGrid();
+  });
+
+  // === Keyboard shortcut ===
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+
+  // === Init ===
+  (async function init() {
+    await fetchToolsJson();
+    loadData();
+    renderCategories();
+    renderGrid();
+  })();
+
+  console.log('🔧 工具导航站已加载');
+  console.log('💡 Ctrl+K 搜索 · 右下角 + 添加工具');
+})();
+</script>
+</body>
+</html>

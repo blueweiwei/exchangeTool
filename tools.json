@@ -1,0 +1,34 @@
+[
+  {
+    "id": "t1",
+    "name": "Base64转换器",
+    "url": "base64-image-converter.html",
+    "desc": "Base64 与图片互转、Base64 与文字互转，支持拖拽上传、粘贴截图、自动解码",
+    "icon": "🖼️",
+    "category": "convert"
+  },
+  {
+    "id": "t2",
+    "name": "签名生成工具",
+    "url": "signature-tool.html",
+    "desc": "报文签名值计算，JSON 参数 ASCII 排序后 HMAC + Base64 签名",
+    "icon": "🔐",
+    "category": "convert"
+  },
+  {
+    "id": "t2b",
+    "name": "签名生成工具(浙江CA)",
+    "url": "signature-tool.html",
+    "desc": "北京CA协同版本 + 浙江CA医疗签，HMAC-SHA256 签名，支持 Base64/Hex 输出",
+    "icon": "🀄",
+    "category": "convert"
+  },
+  {
+    "id": "t2c",
+    "name": "电子发票加解密(博思)",
+    "url": "einvoice-bosi.html",
+    "desc": "博思电子发票接口签名/验签，BASE64+MD5 签名算法，支持加密签名与解密验签",
+    "icon": "🧾",
+    "category": "convert"
+  }
+]
