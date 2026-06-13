@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电子发票加解密 · 博思版 - Invoice Crypto Tool</title>
+<style>
+  :root {
+    --bg-primary: #0c0f15;
+    --bg-secondary: #131820;
+    --bg-card: #1a212e;
+    --bg-card-hover: #1f2737;
+    --border: #2a3448;
+    --border-active: #f0a84c;
+    --text-primary: #e8edf5;
+    --text-secondary: #8892a8;
+    --text-muted: #5a647b;
+    --accent: #f0a84c;
+    --accent-dim: rgba(240, 168, 76, 0.15);
+    --accent-glow: rgba(240, 168, 76, 0.25);
+    --green: #34d399;
+    --green-dim: rgba(52, 211, 153, 0.15);
+    --orange: #fbbf24;
+    --orange-dim: rgba(251, 191, 36, 0.15);
+    --red: #f87171;
+    --red-dim: rgba(248, 113, 113, 0.15);
+    --cyan: #22d3ee;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -20%, rgba(240, 168, 76, 0.06), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 90%, rgba(52, 211, 153, 0.04), transparent);
+  }
+
+  /* Vendor Bar */
+  .vendor-bar {
+    width: 100%;
+    background: rgba(12, 15, 21, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .vendor-bar-inner {
+    display: flex;
+    gap: 2px;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .vendor-btn {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    letter-spacing: 0.3px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+  }
+
+  .vendor-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 60%;
+    height: 2.5px;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .vendor-btn:hover { color: var(--text-secondary); }
+
+  .vendor-btn.active { color: var(--accent); }
+
+  .vendor-btn.active::after {
+    transform: translateX(-50%) scaleX(1);
+  }
+
+  .vendor-btn .v-icon { font-size: 16px; }
+  .vendor-btn .v-name { font-weight: 700; }
+  .vendor-btn .v-tag {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: inherit;
+    opacity: 0.4;
+    letter-spacing: 0.5px;
+    margin-left: 2px;
+  }
+
+  .vendor-btn.active .v-tag { opacity: 0.6; }
+
+  .vendor-btn.v-placeholder {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .vendor-btn.v-placeholder:hover {
+    color: var(--text-muted);
+  }
+
+  /* Header */
+  .header {
+    width: 100%;
+    max-width: 960px;
+    padding: 40px 24px 0;
+    text-align: center;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(240, 168, 76, 0.2);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.3px;
+    margin-bottom: 16px;
+  }
+
+  .header-badge svg { width: 14px; height: 14px; }
+
+  .header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+
+  .header h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  /* Container */
+  .container {
+    width: 100%;
+    max-width: 960px;
+    padding: 32px 24px 60px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: var(--transition);
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Tab bar inside card */
+  .mode-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 20px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+  }
+
+  .mode-tab {
+    flex: 1;
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 7px;
+    transition: var(--transition);
+    text-align: center;
+  }
+
+  .mode-tab:hover { color: var(--text-secondary); }
+
+  .mode-tab.active {
+    background: var(--accent);
+    color: #0c0f15;
+  }
+
+  /* Notice */
+  .notice-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-dim);
+    border: 1px solid rgba(240, 168, 76, 0.15);
+    font-size: 13px;
+    color: var(--accent);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .notice-bar svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Sub-notice for algorithm detail */
+  .algo-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--cyan);
+    background: rgba(34, 211, 238, 0.08);
+    border: 1px solid rgba(34, 211, 238, 0.15);
+    font-size: 13px;
+    color: var(--cyan);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .algo-notice svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Form */
+  .form-row {
+    margin-bottom: 16px;
+  }
+
+  .form-row:last-child { margin-bottom: 0; }
+
+  .form-row-duo {
+    display: flex;
+    gap: 16px;
+  }
+
+  .form-row-duo .form-row {
+    flex: 1;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .form-control {
+    width: 100%;
+  }
+
+  .form-control textarea,
+  .form-control input[type="text"],
+  .form-control select {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    transition: var(--transition);
+    outline: none;
+  }
+
+  .form-control textarea:focus,
+  .form-control input[type="text"]:focus,
+  .form-control select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .form-control textarea { resize: vertical; min-height: 36px; }
+
+  .form-control select {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    cursor: pointer;
+    max-width: 280px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238892a8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  .form-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+
+  .form-hint strong { color: var(--accent); font-weight: 600; }
+
+  /* Output labels */
+  .output-label {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .form-control textarea[readonly] {
+    background: var(--bg-secondary);
+    cursor: default;
+  }
+
+  /* Copy button on output textareas */
+  .output-wrap {
+    position: relative;
+  }
+
+  .output-wrap textarea {
+    padding-right: 48px;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .copy-btn.copied {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-dim);
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0c0f15;
+  }
+
+  .btn-primary:hover {
+    background: #f4b85e;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--text-muted);
+  }
+
+  .btn-success {
+    background: var(--green);
+    color: #0c0f15;
+  }
+
+  .btn-success:hover {
+    background: #4ade80;
+    box-shadow: 0 4px 16px rgba(52, 211, 153, 0.3);
+  }
+
+  .btn-danger {
+    background: var(--orange);
+    color: #0c0f15;
+  }
+
+  .btn-danger:hover {
+    background: #fcd34d;
+    box-shadow: 0 4px 16px rgba(251, 191, 36, 0.3);
+  }
+
+  /* Verify result */
+  .verify-result {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .verify-result.pass {
+    background: var(--green-dim);
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    color: var(--green);
+  }
+
+  .verify-result.fail {
+    background: var(--red-dim);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+    color: var(--red);
+  }
+
+  .verify-result svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  /* Code display */
+  .code-block {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text-primary);
+  }
+
+  .code-block .comment { color: #6a9955; }
+  .code-block .keyword { color: #569cd6; }
+  .code-block .function { color: #dcdcaa; }
+  .code-block .string { color: #ce9178; }
+  .code-block .type { color: #4ec9b0; }
+  .code-block .number { color: #b5cea8; }
+  .code-block .flow-arrow { color: #5a647b; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 999;
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  .toast.error { background: var(--red); color: #fff; }
+  .toast.success { background: var(--green); color: #0c0f15; }
+  .toast.info { background: var(--accent); color: #0c0f15; }
+  .toast.warning { background: var(--orange); color: #0c0f15; }
+
+  /* Footer */
+  .footer {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    width: 100%;
+    max-width: 960px;
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card { animation: fadeIn 0.4s ease both; }
+  .card:nth-child(2) { animation-delay: 0.05s; }
+  .card:nth-child(3) { animation-delay: 0.1s; }
+  .card:nth-child(4) { animation-delay: 0.15s; }
+  .card:nth-child(5) { animation-delay: 0.2s; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Code syntax highlight */
+  .code-dark {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border: 1px solid #333;
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .code-dark .c { color: #6a9955; }
+  .code-dark .k { color: #569cd6; }
+  .code-dark .f { color: #dcdcaa; }
+  .code-dark .s { color: #ce9178; }
+  .code-dark .t { color: #4ec9b0; }
+  .code-dark .n { color: #b5cea8; }
+
+  /* Section title */
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 24px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title:first-child { margin-top: 0; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .header { padding-top: 28px; }
+    .header h1 { font-size: 26px; }
+    .container { padding: 20px 16px 40px; }
+    .card { padding: 16px; }
+    .btn-row { flex-direction: column; }
+    .btn { justify-content: center; }
+    .form-row-duo { flex-direction: column; gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 厂商切换栏 -->
+<div class="vendor-bar">
+  <div class="vendor-bar-inner">
+    <button class="vendor-btn active" data-vendor="bosi">
+      <span class="v-icon">🧾</span>
+      <span class="v-name">博思发票</span>
+      <span class="v-tag">电子发票</span>
+    </button>
+    <button class="vendor-btn v-placeholder" data-vendor="placeholder1">
+      <span class="v-icon">📄</span>
+      <span class="v-name">其他厂商</span>
+      <span class="v-tag">敬请期待</span>
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-badge" id="headerBadge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+    电子发票 · 签名/验签 离线工具
+  </div>
+  <h1><span>博思发票</span>加解密</h1>
+  <p id="headerDesc">博思电子发票接口参数签名/验签。参数按固定顺序拼接 key=value 字符串，追加 &amp;key=密钥 后 MD5 转大写生成 sign。纯离线，数据不上传服务器。</p>
+</header>
+
+<div class="container">
+
+<!-- ===================== 博思发票 面板 ===================== -->
+<div id="bosiPanel">
+
+  <!-- 模式切换：加密 / 解密 -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      操作模式
+    </div>
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="encrypt">🔒 加密 / 签名</button>
+      <button class="mode-tab" data-mode="decrypt">🔓 解密 / 验签</button>
+    </div>
+
+    <div class="notice-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>纯离线运行，所有计算在浏览器本地完成，数据不会上传到任何服务器。</span>
+    </div>
+
+    <!-- ======== 加密 / 签名 面板 ======== -->
+    <div id="encryptPanel">
+
+      <div class="form-row-duo">
+        <div class="form-row">
+          <div class="form-label">appId</div>
+          <div class="form-control">
+            <input type="text" id="encAppId" placeholder="应用 ID，例如：app1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">appKey（签名私钥）</div>
+          <div class="form-control">
+            <input type="text" id="encAppKey" placeholder="接口提供方发放的签名私钥 key" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row-duo">
+        <div class="form-row">
+          <div class="form-label">version</div>
+          <div class="form-control">
+            <input type="text" id="encVersion" value="1.0" placeholder="版本号，默认 1.0" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">noise（随机标识，可留空）</div>
+          <div class="form-control">
+            <input type="text" id="encNoise" placeholder="留空自动生成 UUID" />
+            <div class="form-hint">留空点击「生成签名」时自动生成 UUID</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">原始参数 JSON（将进行 BASE64 编码后放入 data 字段）</div>
+        <div class="form-control">
+          <textarea id="encOriginalParam" rows="8" placeholder='{"fplx":"026001","jqbh":"JQ12345678","kjh":"KJ20240001","nsrsbh":"91110108MA01XXXXX","kprq":"2024-01-15 10:30:00","buyerName":"某某科技有限公司","buyerTaxNo":"91440101MA5XXXXXXX","totalAmount":1000.00}'>
+          </textarea>
+          <div class="form-hint">
+            填写原始业务参数（JSON 对象）。点击「生成签名」后将自动对原 JSON 做 <strong>BASE64 编码</strong> 得到 data 字段。
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">服务地址（可选）</div>
+        <div class="form-control">
+          <input type="text" id="encServiceUrl" placeholder="例如：https://api.bosi.com/invoice/send" />
+          <div class="form-hint">填写后将生成 curl 请求命令</div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="encGenerateBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          生成签名
+        </button>
+        <button class="btn btn-success" id="encExampleBtn">加载示例</button>
+        <button class="btn btn-secondary" id="encClearBtn">清空</button>
+      </div>
+    </div>
+    <!-- ======== 加密面板 END ======== -->
+
+    <!-- ======== 解密 / 验签 面板 ======== -->
+    <div id="decryptPanel" style="display:none;">
+
+      <div class="form-row">
+        <div class="form-label">appKey（签名私钥）</div>
+        <div class="form-control">
+          <input type="text" id="decAppKey" placeholder="接口提供方发放的签名私钥 key" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">返回参数 JSON（含 sign 字段）</div>
+        <div class="form-control">
+          <textarea id="decResponseJson" rows="8" placeholder='{
+  "appid": "app1",
+  "data": "eyJmcGx4IjoiMDI2MDAxIiwiaT9...",
+  "noise": "ibuaiVcKdpRxkhJA",
+  "version": "1.0",
+  "sign": "E9324CF02F95CB072B6DBCEA33E725C3"
+}'></textarea>
+          <div class="form-hint">
+            填入接口返回的完整 JSON（含 <strong>sign</strong> 字段）。点击「验签」将验证 sign 是否匹配，并自动解码 <strong>data</strong> 字段。
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="decVerifyBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          验签 &amp; 解码
+        </button>
+        <button class="btn btn-success" id="decExampleBtn">加载示例</button>
+        <button class="btn btn-secondary" id="decClearBtn">清空</button>
+      </div>
+    </div>
+    <!-- ======== 解密面板 END ======== -->
+  </div>
+
+  <!-- 输出面板（加密） -->
+  <div class="card" id="encOutputCard">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      加密输出
+    </div>
+
+    <div class="form-row-duo">
+      <div class="form-row">
+        <div class="form-label output-label">noise（随机标识）</div>
+        <div class="form-control">
+          <div class="output-wrap">
+            <textarea id="encOutNoise" rows="1" readonly style="height:36px;" placeholder="自动生成的随机 UUID..."></textarea>
+            <button class="copy-btn" id="copyEncNoiseBtn" title="复制 noise">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label output-label">data（BASE64 编码）</div>
+        <div class="form-control">
+          <div class="output-wrap">
+            <textarea id="encOutData" rows="1" readonly style="height:36px;" placeholder="原始参数的 BASE64 编码..."></textarea>
+            <button class="copy-btn" id="copyEncDataBtn" title="复制 data">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">待签字符串（StringA）</div>
+      <div class="form-control">
+        <textarea id="encOutStringA" rows="3" readonly placeholder='拼接后的 key=value 字符串（含 &amp;key=密钥 &amp;version=1.0）...'></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">sign（MD5 转大写）</div>
+      <div class="form-control">
+        <div class="output-wrap">
+          <textarea id="encOutSign" rows="1" readonly style="height:36px;" placeholder="MD5 签名结果（大写十六进制）..."></textarea>
+          <button class="copy-btn" id="copyEncSignBtn" title="复制 sign">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">最终发送参数（完整 JSON）</div>
+      <div class="form-control">
+        <div class="output-wrap">
+          <textarea id="encOutFullJson" rows="6" readonly placeholder='含 appid、data、noise、version、sign 的完整请求 JSON...'></textarea>
+          <button class="copy-btn" id="copyEncFullJsonBtn" title="复制完整 JSON">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">Linux curl 命令</div>
+      <div class="form-control">
+        <textarea id="encOutCurl" rows="4" readonly placeholder='填写服务地址后生成 curl 命令...'></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">curl 命令（数据存文件）</div>
+      <div class="form-control">
+        <textarea id="encOutCurlFile" rows="3" readonly placeholder='将完整 JSON 保存到文件后执行的 curl 命令...'></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 输出面板（解密） -->
+  <div class="card" id="decOutputCard" style="display:none;">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      解密输出
+    </div>
+
+    <div id="decVerifyResultContainer"></div>
+
+    <div class="form-row">
+      <div class="form-label output-label">本地计算的 sign（用于比对）</div>
+      <div class="form-control">
+        <textarea id="decOutCalcSign" rows="1" readonly style="height:36px;" placeholder="本地重新计算的 sign..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">接收到的 sign</div>
+      <div class="form-control">
+        <textarea id="decOutReceivedSign" rows="1" readonly style="height:36px;" placeholder="接口返回报文中的 sign..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">待签字符串（StringA）</div>
+      <div class="form-control">
+        <textarea id="decOutStringA" rows="3" readonly placeholder="验签拼接的字符串..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">解码后的 data（原始参数 JSON）</div>
+      <div class="form-control">
+        <div class="output-wrap">
+          <textarea id="decOutDataDecoded" rows="6" readonly placeholder="BASE64 解码后的原始业务参数..."></textarea>
+          <button class="copy-btn" id="copyDecDataBtn" title="复制解码结果">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 核心算法展示 -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      核心算法逻辑（供核验）
+    </div>
+
+    <div id="bosiAlgo">
+    <div class="code-block">
+┌───────────────────────────────────────────────────────────────┐
+│                   博思发票 签名/验签 流程                       │
+├───────────────────────────────────────────────────────────────┤
+│   签名（加密）：                                               │
+│                                                               │
+│   ① 原始参数 JSON 做 BASE64 编码 → data                       │
+│   ② 生成随机 UUID 或时间戳 → noise                             │
+│   ③ 按固定顺序拼接（不可调换顺序）：                             │
+│      appid=xx&data=xx&noise=xx&key=私钥&version=1.0            │
+│   ④ 对拼接字符串做 MD5 → 结果转大写 → sign                     │
+│   ⑤ 最终参数：{appid, data, noise, version, sign}              │
+│                                                               │
+│   ──────────────────────────────────────────                   │
+│   验签（解密）：                                               │
+│                                                               │
+│   ① 提取返回参数中的 {appid, data, noise, version} + 本地 key  │
+│   ② 按相同规则拼接：                                             │
+│      appid=xx&data=xx&noise=xx&key=私钥&version=1.0            │
+│   ③ MD5 → 大写，与 sign 字段比较                                │
+│   ④ 一致 → 验签通过；否则 → 验签失败                            │
+│   ⑤ 同时 BASE64 解码 data 字段还原原始参数                       │
+│                                                               │
+│   ★ 关键区别：Java 代码拼接时 key 和 version 放在数据之后         │
+│     即 ...&key=私钥&version=1.0（key 在前，version 在后）       │
+└───────────────────────────────────────────────────────────────┘
+    </div>
+
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      JavaScript 核心代码
+    </div>
+    <div class="code-dark"><span class="k">function</span> <span class="f">generateSign</span>(appId, dataBase64, noise, appKey, version) {
+    <span class="c">// ① 按固定顺序拼接</span>
+    <span class="k">var</span> raw = <span class="s">'appid='</span> + appId
+           + <span class="s">'&data='</span> + dataBase64
+           + <span class="s">'&noise='</span> + noise
+           + <span class="s">'&key='</span> + appKey
+           + <span class="s">'&version='</span> + version;
+    <span class="c">// ② MD5 → 大写</span>
+    <span class="k">return</span> <span class="f">MD5</span>(raw).<span class="f">toUpperCase</span>();
+}
+
+<span class="k">function</span> <span class="f">encrypt</span>(originalJson, appId, appKey, version) {
+    <span class="k">var</span> data = <span class="f">btoa</span>(<span class="f">unescape</span>(<span class="f">encodeURIComponent</span>(originalJson)));
+    <span class="k">var</span> noise = <span class="f">generateUUID</span>();
+    <span class="k">var</span> sign = <span class="f">generateSign</span>(appId, data, noise, appKey, version);
+    <span class="k">return</span> { appid: appId, data, noise, version, sign };
+}
+
+<span class="k">function</span> <span class="f">verify</span>(response, appKey) {
+    <span class="k">var</span> calcSign = <span class="f">generateSign</span>(
+        response.appid, response.data,
+        response.noise, appKey, response.version
+    );
+    <span class="k">var</span> valid = calcSign === response.sign;
+    <span class="k">var</span> decodedData = <span class="f">atob</span>(response.data);
+    <span class="k">return</span> { valid, calcSign, decodedData };
+}</div>
+
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Java 原始实现（对照）
+    </div>
+    <div class="code-dark"><span class="k">private</span> <span class="t">Map</span>&lt;<span class="t">String</span>, <span class="t">Object</span>&gt; <span class="f">generateHttpParam</span>(<span class="t">Object</span> originalParam) {
+    <span class="t">String</span> appId = ParamUtils.<span class="f">getParameter</span>(ETicket_APPID);
+    <span class="t">String</span> data = <span class="t">JSONObject</span>.<span class="f">toJSONString</span>(originalParam);
+    <span class="t">BASE64Encoder</span> encoder = <span class="k">new</span> <span class="f">BASE64Encoder</span>();
+    <span class="t">String</span> encodeData = encoder.<span class="f">encode</span>(data.<span class="f">getBytes</span>(<span class="s">"UTF-8"</span>));
+    <span class="t">String</span> noise = UUID.<span class="f">randomUUID</span>().<span class="f">toString</span>();
+    <span class="t">String</span> appKey = ParamUtils.<span class="f">getParameter</span>(ETicket_APPKEY);
+    <span class="c">// 按固定顺序拼接</span>
+    <span class="t">String</span> reqStr = <span class="s">"appid="</span> + appId + <span class="s">"&data="</span> + encodeData
+                  + <span class="s">"&noise="</span> + noise + <span class="s">"&key="</span> + appKey
+                  + <span class="s">"&version=1.0"</span>;
+    <span class="c">// MD5 → 大写</span>
+    <span class="t">String</span> sign = <span class="t">DigestUtils</span>.<span class="f">md5DigestAsHex</span>(reqStr.<span class="f">getBytes</span>());
+    sign = sign.<span class="f">toUpperCase</span>();
+    <span class="c">// 组装返回</span>
+    httpParam.<span class="f">put</span>(<span class="s">"appid"</span>, appId);
+    httpParam.<span class="f">put</span>(<span class="s">"data"</span>, encodeData);
+    httpParam.<span class="f">put</span>(<span class="s">"noise"</span>, noise);
+    httpParam.<span class="f">put</span>(<span class="s">"version"</span>, <span class="s">"1.0"</span>);
+    httpParam.<span class="f">put</span>(<span class="s">"sign"</span>, sign);
+    <span class="k">return</span> httpParam;
+}</div>
+  </div>
+</div>
+
+</div>
+
+<footer class="footer">
+  数据仅在本地浏览器中处理，不会上传到任何服务器。博思发票签名算法 v1.0。
+</footer>
+
+<script>
+(function () {
+    'use strict';
+
+    // ======================== DOM 引用 ========================
+    // Toast
+    var toast = document.getElementById('toast');
+    var toastTimer = null;
+
+    function showToast(msg, type) {
+        type = type || 'info';
+        toast.textContent = msg;
+        toast.className = 'toast ' + type + ' show';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+            toast.classList.remove('show');
+        }, 2500);
+    }
+
+    // ======================== MD5 实现 ========================
+    // 纯 JS MD5 (RFC 1321)
+    var md5 = (function () {
+        function md5cycle(x, k) {
+            var a = x[0], b = x[1], c = x[2], d = x[3];
+            a = ff(a, b, c, d, k[ 0],  7, -680876936);
+            d = ff(d, a, b, c, k[ 1], 12, -389564586);
+            c = ff(c, d, a, b, k[ 2], 17,  606105819);
+            b = ff(b, c, d, a, k[ 3], 22, -1044525330);
+            a = ff(a, b, c, d, k[ 4],  7, -176418897);
+            d = ff(d, a, b, c, k[ 5], 12,  1200080426);
+            c = ff(c, d, a, b, k[ 6], 17, -1473231341);
+            b = ff(b, c, d, a, k[ 7], 22, -45705983);
+            a = ff(a, b, c, d, k[ 8],  7,  1770035416);
+            d = ff(d, a, b, c, k[ 9], 12, -1958414417);
+            c = ff(c, d, a, b, k[10], 17, -42063);
+            b = ff(b, c, d, a, k[11], 22, -1990404162);
+            a = ff(a, b, c, d, k[12],  7,  1804603682);
+            d = ff(d, a, b, c, k[13], 12, -40341101);
+            c = ff(c, d, a, b, k[14], 17, -1502002290);
+            b = ff(b, c, d, a, k[15], 22,  1236535329);
+            a = gg(a, b, c, d, k[ 1],  5, -165796510);
+            d = gg(d, a, b, c, k[ 6],  9, -1069501632);
+            c = gg(c, d, a, b, k[11], 14,  643717713);
+            b = gg(b, c, d, a, k[ 0], 20, -373897302);
+            a = gg(a, b, c, d, k[ 5],  5, -701558691);
+            d = gg(d, a, b, c, k[10],  9,  38016083);
+            c = gg(c, d, a, b, k[15], 14, -660478335);
+            b = gg(b, c, d, a, k[ 4], 20, -405537848);
+            a = gg(a, b, c, d, k[ 9],  5,  568446438);
+            d = gg(d, a, b, c, k[14],  9, -1019803690);
+            c = gg(c, d, a, b, k[ 3], 14, -187363961);
+            b = gg(b, c, d, a, k[ 8], 20,  1163531501);
+            a = gg(a, b, c, d, k[13],  5, -1444681467);
+            d = gg(d, a, b, c, k[ 2],  9, -51403784);
+            c = gg(c, d, a, b, k[ 7], 14,  1735328473);
+            b = gg(b, c, d, a, k[12], 20, -1926607734);
+            a = ii(a, b, c, d, k[ 5],  4, -378558);
+            d = ii(d, a, b, c, k[ 8], 11, -2022574463);
+            c = ii(c, d, a, b, k[11], 16,  1839030562);
+            b = ii(b, c, d, a, k[14], 23, -35309556);
+            a = ii(a, b, c, d, k[ 1],  4, -1530992060);
+            d = ii(d, a, b, c, k[ 4], 11,  1272893353);
+            c = ii(c, d, a, b, k[ 7], 16, -155497632);
+            b = ii(b, c, d, a, k[10], 23, -1094730640);
+            a = ii(a, b, c, d, k[13],  4,  681279174);
+            d = ii(d, a, b, c, k[ 0], 11, -358537222);
+            c = ii(c, d, a, b, k[ 3], 16, -722521979);
+            b = ii(b, c, d, a, k[ 6], 23,  76029189);
+            a = ii(a, b, c, d, k[ 9],  4, -640364487);
+            d = ii(d, a, b, c, k[12], 11, -421815835);
+            c = ii(c, d, a, b, k[15], 16,  530742520);
+            b = ii(b, c, d, a, k[ 2], 23, -995338651);
+            x[0] = add32(a, x[0]); x[1] = add32(b, x[1]);
+            x[2] = add32(c, x[2]); x[3] = add32(d, x[3]);
+        }
+        function cmn(q, a, b, x, s, t) { return add32(bitRotateLeft(add32(a, q, add32(x, t)), s), b); }
+        function ff(a, b, c, d, x, s, t) { return cmn(bitOr(bitAnd(b, c), bitAnd(bitNot(b), d)), a, b, x, s, t); }
+        function gg(a, b, c, d, x, s, t) { return cmn(bitOr(bitAnd(b, d), bitAnd(c, bitNot(d))), a, b, x, s, t); }
+        function hh(a, b, c, d, x, s, t) { return cmn(bitXor(b, c, d), a, b, x, s, t); }
+        function ii(a, b, c, d, x, s, t) { return cmn(bitXor(c, bitOr(b, bitNot(d))), a, b, x, s, t); }
+        function bitRotateLeft(num, cnt) { return (num << cnt) | (num >>> (32 - cnt)); }
+        function bitAnd(a, b) { return a & b; }
+        function bitNot(a) { return ~a & 0xFFFFFFFF; }
+        function bitOr(a, b) { return a | b; }
+        function bitXor(a, b, c) { return (a ^ b ^ c) >>> 0; }
+        function add32() {
+            var sum = 0, i;
+            for (i = 0; i < arguments.length; i++) {
+                sum += arguments[i];
+                sum = (sum & 0xFFFFFFFF) + (sum >>> 32);
+            }
+            return sum >>> 0;
+        }
+        function md5blk(s) {
+            var md5blks = [], i;
+            for (i = 0; i < 64; i += 4) {
+                md5blks[i >> 2] = s.charCodeAt(i) + (s.charCodeAt(i + 1) << 8) + (s.charCodeAt(i + 2) << 16) + (s.charCodeAt(i + 3) << 24);
+            }
+            return md5blks;
+        }
+        function md51(s) {
+            var n = s.length, state = [1732584193, -271733879, -1732584194, 271733878], i, len;
+            for (i = 64; i <= n; i += 64) {
+                md5cycle(state, md5blk(s.substring(i - 64, i)));
+            }
+            s = s.substring(i - 64);
+            len = s.length;
+            s += String.fromCharCode(0x80);
+            while (s.length % 64 !== 56) s += String.fromCharCode(0);
+            for (i = 0; i < 8; i++) s += String.fromCharCode((n * 8) >>> (i * 8) & 0xFF);
+            for (i = 0; i < s.length; i += 64) {
+                md5cycle(state, md5blk(s.substring(i, i + 64)));
+            }
+            var hex = '';
+            for (i = 0; i < 4; i++) {
+                hex += ((state[i] >>> 0).toString(16));
+            }
+            return hex;
+        }
+        return function (s) { return md51(s); };
+    })();
+
+    // ======================== 工具函数 ========================
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    function autoGrow(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+
+    // UTF-8 安全的 Base64 编码（支持中文）
+    function utf8ToBase64(str) {
+        return btoa(unescape(encodeURIComponent(str)));
+    }
+
+    // Base64 解码为 UTF-8（支持中文）
+    function base64ToUtf8(str) {
+        return decodeURIComponent(escape(atob(str)));
+    }
+
+    // ======================== 加密 / 签名逻辑 ========================
+    function doEncrypt() {
+        var appId = document.getElementById('encAppId').value.trim();
+        var appKey = document.getElementById('encAppKey').value.trim();
+        var version = document.getElementById('encVersion').value.trim() || '1.0';
+        var noiseInput = document.getElementById('encNoise').value.trim();
+        var originalJson = document.getElementById('encOriginalParam').value.trim();
+        var serviceUrl = document.getElementById('encServiceUrl').value.trim();
+
+        // 校验
+        if (!appId) { showToast('请输入 appId', 'warning'); return; }
+        if (!appKey) { showToast('请输入 appKey（签名私钥）', 'warning'); return; }
+        if (!originalJson) { showToast('请输入原始参数 JSON', 'warning'); return; }
+
+        try {
+            JSON.parse(originalJson);
+        } catch (e) {
+            showToast('原始参数 JSON 格式错误：' + e.message, 'error');
+            return;
+        }
+
+        // 生成 noise
+        var noise = noiseInput || generateUUID();
+
+        // BASE64 编码 data
+        var dataBase64 = utf8ToBase64(originalJson);
+
+        // 拼接待签字符串（严格按 Java 代码顺序）
+        var reqStr = 'appid=' + appId +
+                     '&data=' + dataBase64 +
+                     '&noise=' + noise +
+                     '&key=' + appKey +
+                     '&version=' + version;
+
+        // MD5 → 大写
+        var sign = md5(reqStr).toUpperCase();
+
+        // 组装最终参数
+        var result = {
+            appid: appId,
+            data: dataBase64,
+            noise: noise,
+            version: version,
+            sign: sign
+        };
+        var resultJson = JSON.stringify(result, null, 2);
+
+        // 输出
+        document.getElementById('encOutNoise').value = noise;
+        autoGrow(document.getElementById('encOutNoise'));
+        document.getElementById('encOutData').value = dataBase64;
+        autoGrow(document.getElementById('encOutData'));
+        document.getElementById('encOutStringA').value = reqStr;
+        autoGrow(document.getElementById('encOutStringA'));
+        document.getElementById('encOutSign').value = sign;
+        autoGrow(document.getElementById('encOutSign'));
+        document.getElementById('encOutFullJson').value = resultJson;
+        autoGrow(document.getElementById('encOutFullJson'));
+
+        // curl 命令
+        if (serviceUrl) {
+            var escJson = resultJson.replace(/'/g, "'\\''");
+            var curl = "curl -X POST \\\n" +
+                "  --header 'Content-Type: application/json' \\\n" +
+                "  --header 'Accept: application/json' \\\n" +
+                "  -d '" + escJson + "' \\\n" +
+                "  \"" + serviceUrl + "\"";
+            document.getElementById('encOutCurl').value = curl;
+            document.getElementById('encOutCurlFile').value =
+                "curl -X POST --header Content-Type:application/json --header Accept:application/json --data @数据文件.txt \"" + serviceUrl + "\"";
+        } else {
+            document.getElementById('encOutCurl').value = '（请填写服务地址后重新生成）';
+            document.getElementById('encOutCurlFile').value = '（请填写服务地址后重新生成）';
+        }
+        autoGrow(document.getElementById('encOutCurl'));
+        autoGrow(document.getElementById('encOutCurlFile'));
+
+        showToast('签名生成成功！', 'success');
+    }
+
+    // ======================== 解密 / 验签逻辑 ========================
+    function doDecrypt() {
+        var appKey = document.getElementById('decAppKey').value.trim();
+        var respJson = document.getElementById('decResponseJson').value.trim();
+
+        if (!appKey) { showToast('请输入 appKey（签名私钥）', 'warning'); return; }
+        if (!respJson) { showToast('请输入返回参数 JSON', 'warning'); return; }
+
+        var resp;
+        try {
+            resp = JSON.parse(respJson);
+        } catch (e) {
+            showToast('返回参数 JSON 格式错误：' + e.message, 'error');
+            return;
+        }
+
+        if (!resp.appid || !resp.data || !resp.noise || !resp.version || !resp.sign) {
+            showToast('缺少必填字段：appid / data / noise / version / sign', 'warning');
+            return;
+        }
+
+        // 按相同规则拼接
+        var reqStr = 'appid=' + resp.appid +
+                     '&data=' + resp.data +
+                     '&noise=' + resp.noise +
+                     '&key=' + appKey +
+                     '&version=' + resp.version;
+
+        // 计算 sign
+        var calcSign = md5(reqStr).toUpperCase();
+        var receivedSign = resp.sign;
+        var valid = calcSign === receivedSign;
+
+        // 解码 data
+        var decodedData = '';
+        try {
+            decodedData = base64ToUtf8(resp.data);
+            // 尝试格式化为 JSON
+            try {
+                var parsed = JSON.parse(decodedData);
+                decodedData = JSON.stringify(parsed, null, 2);
+            } catch (e2) {
+                // 不是 JSON 或已格式化，保持原样
+            }
+        } catch (e) {
+            decodedData = '（BASE64 解码失败：' + e.message + '）';
+        }
+
+        // 输出验签结果
+        var container = document.getElementById('decVerifyResultContainer');
+        if (valid) {
+            container.innerHTML = '<div class="verify-result pass">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+                '<span>✅ 验签通过 — sign 匹配，数据未被篡改</span></div>';
+        } else {
+            container.innerHTML = '<div class="verify-result fail">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
+                '<span>❌ 验签失败 — sign 不匹配，数据可能已被篡改！</span></div>';
+        }
+
+        document.getElementById('decOutCalcSign').value = calcSign;
+        autoGrow(document.getElementById('decOutCalcSign'));
+        document.getElementById('decOutReceivedSign').value = receivedSign;
+        autoGrow(document.getElementById('decOutReceivedSign'));
+        document.getElementById('decOutStringA').value = reqStr;
+        autoGrow(document.getElementById('decOutStringA'));
+        document.getElementById('decOutDataDecoded').value = decodedData;
+        autoGrow(document.getElementById('decOutDataDecoded'));
+
+        showToast(valid ? '验签通过！' : '验签失败！', valid ? 'success' : 'error');
+    }
+
+    // ======================== 示例数据 ========================
+    var EXAMPLE_ORIGINAL = JSON.stringify({
+        fplx: "026001",
+        jqbh: "JQ12345678",
+        kjh: "KJ20240001",
+        nsrsbh: "91110108MA01XXXXX",
+        kprq: "2024-01-15 10:30:00",
+        buyerName: "某某科技有限公司",
+        buyerTaxNo: "91440101MA5XXXXXXX",
+        totalAmount: 1000.00
+    }, null, 2);
+
+    var EXAMPLE_APPID = "app1";
+    var EXAMPLE_APPKEY = "192006250b4c09247ec02f6a2d";
+
+    // 预计算示例的响应（用于解密示例）
+    var _exampleNoise = "ibuaiVcKdpRxkhJA";
+    var _exampleData = utf8ToBase64(EXAMPLE_ORIGINAL);
+    var _exampleReqStr = 'appid=' + EXAMPLE_APPID +
+        '&data=' + _exampleData +
+        '&noise=' + _exampleNoise +
+        '&key=' + EXAMPLE_APPKEY +
+        '&version=1.0';
+    var _exampleSign = md5(_exampleReqStr).toUpperCase();
+
+    var EXAMPLE_RESPONSE = JSON.stringify({
+        appid: EXAMPLE_APPID,
+        data: _exampleData,
+        noise: _exampleNoise,
+        version: "1.0",
+        sign: _exampleSign
+    }, null, 2);
+
+    // ======================== 事件绑定 ========================
+
+    // 加密面板
+    document.getElementById('encGenerateBtn').addEventListener('click', doEncrypt);
+
+    document.getElementById('encExampleBtn').addEventListener('click', function () {
+        document.getElementById('encAppId').value = EXAMPLE_APPID;
+        document.getElementById('encAppKey').value = EXAMPLE_APPKEY;
+        document.getElementById('encVersion').value = '1.0';
+        document.getElementById('encNoise').value = '';
+        document.getElementById('encOriginalParam').value = EXAMPLE_ORIGINAL;
+        document.getElementById('encServiceUrl').value = '';
+        document.getElementById('encOutNoise').value = '';
+        document.getElementById('encOutData').value = '';
+        document.getElementById('encOutStringA').value = '';
+        document.getElementById('encOutSign').value = '';
+        document.getElementById('encOutFullJson').value = '';
+        document.getElementById('encOutCurl').value = '';
+        document.getElementById('encOutCurlFile').value = '';
+        showToast('已加载示例数据，点击「生成签名」计算', 'info');
+    });
+
+    document.getElementById('encClearBtn').addEventListener('click', function () {
+        document.getElementById('encAppId').value = '';
+        document.getElementById('encAppKey').value = '';
+        document.getElementById('encVersion').value = '1.0';
+        document.getElementById('encNoise').value = '';
+        document.getElementById('encOriginalParam').value = '';
+        document.getElementById('encServiceUrl').value = '';
+        document.getElementById('encOutNoise').value = '';
+        document.getElementById('encOutData').value = '';
+        document.getElementById('encOutStringA').value = '';
+        document.getElementById('encOutSign').value = '';
+        document.getElementById('encOutFullJson').value = '';
+        document.getElementById('encOutCurl').value = '';
+        document.getElementById('encOutCurlFile').value = '';
+        showToast('已清空所有内容', 'info');
+    });
+
+    // 解密面板
+    document.getElementById('decVerifyBtn').addEventListener('click', doDecrypt);
+
+    document.getElementById('decExampleBtn').addEventListener('click', function () {
+        document.getElementById('decAppKey').value = EXAMPLE_APPKEY;
+        document.getElementById('decResponseJson').value = EXAMPLE_RESPONSE;
+        document.getElementById('decOutCalcSign').value = '';
+        document.getElementById('decOutReceivedSign').value = '';
+        document.getElementById('decOutStringA').value = '';
+        document.getElementById('decOutDataDecoded').value = '';
+        document.getElementById('decVerifyResultContainer').innerHTML = '';
+        showToast('已加载示例返回报文，点击「验签 &amp; 解码」验证', 'info');
+    });
+
+    document.getElementById('decClearBtn').addEventListener('click', function () {
+        document.getElementById('decAppKey').value = '';
+        document.getElementById('decResponseJson').value = '';
+        document.getElementById('decOutCalcSign').value = '';
+        document.getElementById('decOutReceivedSign').value = '';
+        document.getElementById('decOutStringA').value = '';
+        document.getElementById('decOutDataDecoded').value = '';
+        document.getElementById('decVerifyResultContainer').innerHTML = '';
+        showToast('已清空所有内容', 'info');
+    });
+
+    // ======================== 模式切换（加密 / 解密） ========================
+    var modeTabs = document.querySelectorAll('.mode-tab');
+    var encryptPanel = document.getElementById('encryptPanel');
+    var decryptPanel = document.getElementById('decryptPanel');
+    var encOutputCard = document.getElementById('encOutputCard');
+    var decOutputCard = document.getElementById('decOutputCard');
+
+    function switchMode(mode) {
+        modeTabs.forEach(function (t) { t.classList.toggle('active', t.dataset.mode === mode); });
+        var isEnc = mode === 'encrypt';
+        encryptPanel.style.display = isEnc ? '' : 'none';
+        decryptPanel.style.display = isEnc ? 'none' : '';
+        encOutputCard.style.display = isEnc ? '' : 'none';
+        decOutputCard.style.display = isEnc ? 'none' : '';
+    }
+
+    modeTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () { switchMode(tab.dataset.mode); });
+    });
+
+    // ======================== Copy Buttons ========================
+    function setupCopyBtn(btnId, textareaId) {
+        var btn = document.getElementById(btnId);
+        var textarea = document.getElementById(textareaId);
+        if (!btn || !textarea) return;
+        btn.addEventListener('click', async function () {
+            var text = textarea.value;
+            if (!text) { showToast('没有可复制的内容', 'warning'); return; }
+            try {
+                await navigator.clipboard.writeText(text);
+                var orig = btn.innerHTML;
+                btn.classList.add('copied');
+                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+                showToast('已复制到剪贴板', 'success');
+                setTimeout(function () {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = orig;
+                }, 2000);
+            } catch (e) {
+                showToast('复制失败，请手动选择复制', 'error');
+            }
+        });
+    }
+
+    setupCopyBtn('copyEncNoiseBtn', 'encOutNoise');
+    setupCopyBtn('copyEncDataBtn', 'encOutData');
+    setupCopyBtn('copyEncSignBtn', 'encOutSign');
+    setupCopyBtn('copyEncFullJsonBtn', 'encOutFullJson');
+    setupCopyBtn('copyDecDataBtn', 'decOutDataDecoded');
+
+    // ======================== 厂商切换 ========================
+    // 只有博思发票一个有效厂商，其他为占位
+    var vendorBtns = document.querySelectorAll('.vendor-btn[data-vendor]');
+
+    vendorBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var vendor = btn.dataset.vendor;
+            if (vendor === 'placeholder1') {
+                showToast('其他厂商功能正在开发中，敬请期待', 'info');
+                return;
+            }
+            vendorBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.vendor === vendor); });
+        });
+    });
+
+})();
+</script>
+</body>
+</html>
