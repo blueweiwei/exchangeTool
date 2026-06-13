@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>开发者工具箱 — Dev Toolkit</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --bg-card: #141922;
+    --bg-card-hover: #191f2c;
+    --bg-surface: #1a2231;
+    --border: #232d3e;
+    --border-light: #2d3a50;
+    --text: #e6edf5;
+    --text-secondary: #8a94a8;
+    --text-muted: #586278;
+    --accent: #22d3ee;
+    --accent-dim: rgba(34,211,238,0.12);
+    --accent-glow: rgba(34,211,238,0.18);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --orange: #fbbf24;
+    --orange-dim: rgba(251,191,36,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-xs: 5px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    --transition: 0.2s ease;
+    --sidebar-w: 200px;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 20% 15%, rgba(34,211,238,0.04), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 85%, rgba(52,211,153,0.03), transparent);
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ===== Layout ===== */
+  .app-layout {
+    display: flex;
+    min-height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-header {
+    padding: 0 16px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar-logo .icon-box {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #0e7490);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: #0b0e14;
+    flex-shrink: 0;
+  }
+
+  .sidebar-logo h1 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+  }
+
+  .sidebar-logo p {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+
+  .sidebar .nav-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 16px 16px 6px;
+  }
+
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: left;
+    border-right: 2px solid transparent;
+  }
+
+  .nav-btn:hover {
+    background: rgba(255,255,255,0.03);
+    color: var(--text);
+  }
+
+  .nav-btn.active {
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-right-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .nav-btn .nav-icon { font-size: 15px; flex-shrink: 0; }
+  .nav-btn .nav-badge {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  /* ===== Main Content ===== */
+  .main-content {
+    flex: 1;
+    min-width: 0;
+    padding: 28px 32px 40px;
+    overflow-y: auto;
+  }
+
+  .page-header {
+    margin-bottom: 24px;
+  }
+
+  .page-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .page-header p {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* ===== Tab Panel ===== */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ===== Tool Section ===== */
+  .tool-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tool-section:last-child { margin-bottom: 0; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .section-title .dot.cyan { background: var(--accent); }
+  .section-title .dot.green { background: var(--green); }
+  .section-title .dot.orange { background: var(--orange); }
+
+  /* ===== Textarea ===== */
+  .mono-textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    transition: var(--transition);
+  }
+
+  .mono-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .mono-textarea::placeholder { color: var(--text-muted); font-family: 'Inter', sans-serif; }
+
+  .textarea-group { display: flex; flex-direction: column; gap: 10px; }
+
+  .divider-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    margin: 2px 0;
+  }
+
+  .divider-line::before,
+  .divider-line::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ===== Buttons ===== */
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--bg-surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: var(--bg-card-hover); border-color: var(--border-light); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--accent-dim);
+    border-color: rgba(34,211,238,0.3);
+    color: var(--accent);
+  }
+
+  .btn-primary:hover { background: rgba(34,211,238,0.2); border-color: rgba(34,211,238,0.5); }
+
+  .btn-green {
+    background: var(--green-dim);
+    border-color: rgba(52,211,153,0.3);
+    color: var(--green);
+  }
+
+  .btn-green:hover { background: rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.5); }
+
+  .btn-orange {
+    background: var(--orange-dim);
+    border-color: rgba(251,191,36,0.3);
+    color: var(--orange);
+  }
+
+  .btn-orange:hover { background: rgba(251,191,36,0.2); border-color: rgba(251,191,36,0.5); }
+
+  .btn-copy { color: var(--text-secondary); }
+  .btn-copy:hover { color: var(--green); border-color: var(--green-dim); }
+
+  .btn-clear { color: var(--text-muted); }
+  .btn-clear:hover { color: var(--red); border-color: var(--red-dim); }
+
+  /* ===== Timestamp Specific ===== */
+  .ts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 700px) {
+    .ts-grid { grid-template-columns: 1fr; }
+  }
+
+  .ts-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+  }
+
+  .ts-box label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+  }
+
+  .ts-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .ts-input-row input[type="text"],
+  .ts-input-row input[type="datetime-local"] {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: var(--transition);
+  }
+
+  .ts-input-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+  .ts-radio-group {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 2px;
+  }
+
+  .ts-radio-group label {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: var(--transition);
+    margin: 0;
+    color: var(--text-muted);
+  }
+
+  .ts-radio-group input { display: none; }
+
+  .ts-radio-group input:checked + label {
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .ts-result {
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    min-height: 56px;
+  }
+
+  /* ===== UUID ===== */
+  .uuid-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .uuid-controls select {
+    padding: 7px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .uuid-controls select:focus { border-color: var(--accent); }
+
+  /* ===== QR Code ===== */
+  .qr-area {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .qr-input-area {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .qr-input-area textarea {
+    min-height: 80px;
+  }
+
+  .qr-output-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    min-width: 180px;
+  }
+
+  #qrContainer {
+    width: 220px;
+    height: 220px;
+    background: #ffffff;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #qrContainer canvas {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 220px;
+  }
+
+  #qrContainer .placeholder {
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 10px 24px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.warn { border-color: var(--orange); color: var(--orange); }
+  .toast.info { border-color: var(--accent); color: var(--accent); }
+
+  /* ===== Error ===== */
+  .error-box {
+    display: none;
+    padding: 8px 12px;
+    background: var(--red-dim);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: var(--radius-xs);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .app-layout { flex-direction: column; }
+    .sidebar {
+      width: 100%;
+      height: auto;
+      position: static;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0 8px;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .sidebar-header {
+      padding: 0 16px 12px;
+      width: 100%;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .sidebar .nav-label { display: none; }
+    .nav-btn {
+      width: auto;
+      padding: 6px 12px;
+      border-right: none;
+      border-radius: var(--radius-xs);
+      font-size: 12px;
+    }
+    .nav-btn.active { border-right: none; border-bottom: 2px solid var(--accent); }
+    .nav-btn .nav-badge { display: none; }
+    .main-content { padding: 20px 16px 32px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<div class="app-layout">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="icon-box">🧰</div>
+        <div>
+          <h1>工具箱</h1>
+          <p>离线可用 · 纯前端</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-label">工具分类</div>
+    <button class="nav-btn active" data-tab="tab-encode">
+      <span class="nav-icon">🔗</span> 编解码
+    </button>
+    <button class="nav-btn" data-tab="tab-format">
+      <span class="nav-icon">📐</span> 格式化
+    </button>
+    <button class="nav-btn" data-tab="tab-timestamp">
+      <span class="nav-icon">⏱</span> 时间戳
+    </button>
+    <button class="nav-btn" data-tab="tab-generate">
+      <span class="nav-icon">🛠</span> 生成工具
+    </button>
+  </aside>
+
+  <!-- ===== Main Content ===== -->
+  <main class="main-content">
+
+    <!-- ==================== Tab: 编解码 ==================== -->
+    <div class="tab-panel active" id="tab-encode">
+      <div class="page-header">
+        <h2>🔗 编解码</h2>
+        <p>URL 编码/解码、JSON 转义/反转义</p>
+      </div>
+
+      <!-- URL 编解码 -->
+      <section class="tool-section">
+        <div class="section-header">
+          <div class="section-title"><span class="dot cyan"></span> URL 编解码</div>
+        </div>
+        <div class="textarea-group">
+          <textarea class="mono-textarea" id="urlInput" placeholder="输入要编码或解码的文本…" rows="4"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="urlEncodeBtn">URL 编码</button>
+            <button class="btn btn-primary" id="urlDecodeBtn">URL 解码</button>
+            <span style="flex:1"></span>
+            <button class="btn btn-clear" id="urlClearBtn">清空</button>
+          </div>
+          <div class="divider-line">输出</div>
+          <textarea class="mono-textarea" id="urlOutput" placeholder="结果将在这里显示…" rows="4" readonly></textarea>
+          <div class="btn-row">
+            <button class="btn btn-copy" id="urlCopyBtn">📋 复制结果</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- JSON 转义 -->
+      <section class="tool-section">
+        <div class="section-header">
+          <div class="section-title"><span class="dot green"></span> JSON 转义</div>
+        </div>
+        <div class="textarea-group">
+          <textarea class="mono-textarea" id="jsonEscInput" placeholder="输入要转义或反转义的文本…" rows="4"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-green" id="jsonEscBtn">JSON 转义</button>
+            <button class="btn btn-green" id="jsonUnescBtn">JSON 反转义</button>
+            <span style="flex:1"></span>
+            <button class="btn btn-clear" id="jsonEscClearBtn">清空</button>
+          </div>
+          <div class="divider-line">输出</div>
+          <textarea class="mono-textarea" id="jsonEscOutput" placeholder="结果将在这里显示…" rows="4" readonly></textarea>
+          <div class="btn-row">
+            <button class="btn btn-copy" id="jsonEscCopyBtn">📋 复制结果</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== Tab: 格式化 ==================== -->
+    <div class="tab-panel" id="tab-format">
+      <div class="page-header">
+        <h2>📐 格式化</h2>
+        <p>JSON 格式化/压缩/校验、XML 格式化/压缩</p>
+      </div>
+
+      <!-- JSON 格式化 -->
+      <section class="tool-section">
+        <div class="section-header">
+          <div class="section-title"><span class="dot cyan"></span> JSON 格式化 / 校验</div>
+        </div>
+        <div class="textarea-group">
+          <textarea class="mono-textarea" id="jsonFmtInput" placeholder='{"name":"工具箱","version":"1.0"}' rows="5" spellcheck="false"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="jsonFormatBtn">格式化</button>
+            <button class="btn btn-primary" id="jsonCompressBtn">压缩</button>
+            <button class="btn btn-orange" id="jsonValidateBtn">校验</button>
+            <span style="flex:1"></span>
+            <button class="btn btn-clear" id="jsonFmtClearBtn">清空</button>
+          </div>
+          <div class="error-box" id="jsonFmtError"></div>
+          <div class="divider-line">输出</div>
+          <textarea class="mono-textarea" id="jsonFmtOutput" placeholder="格式化的 JSON 将在这里显示…" rows="6" readonly></textarea>
+          <div class="btn-row">
+            <button class="btn btn-copy" id="jsonFmtCopyBtn">📋 复制结果</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- XML 格式化 -->
+      <section class="tool-section">
+        <div class="section-header">
+          <div class="section-title"><span class="dot green"></span> XML 格式化</div>
+        </div>
+        <div class="textarea-group">
+          <textarea class="mono-textarea" id="xmlInput" placeholder='&lt;root&gt;&lt;item id="1"&gt;Hello&lt;/item&gt;&lt;/root&gt;' rows="5" spellcheck="false"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-green" id="xmlFormatBtn">格式化</button>
+            <button class="btn btn-green" id="xmlCompressBtn">压缩</button>
+            <span style="flex:1"></span>
+            <button class="btn btn-clear" id="xmlClearBtn">清空</button>
+          </div>
+          <div class="divider-line">输出</div>
+          <textarea class="mono-textarea" id="xmlOutput" placeholder="格式化的 XML 将在这里显示…" rows="6" readonly></textarea>
+          <div class="btn-row">
+            <button class="btn btn-copy" id="xmlCopyBtn">📋 复制结果</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== Tab: 时间戳 ==================== -->
+    <div class="tab-panel" id="tab-timestamp">
+      <div class="page-header">
+        <h2>⏱ 时间戳</h2>
+        <p>时间戳与日期时间互转</p>
+      </div>
+
+      <section class="tool-section">
+        <div class="section-header">
+          <div class="section-title"><span class="dot orange"></span> 时间戳转换</div>
+        </div>
+        <div class="ts-grid">
+
+          <!-- 时间戳 → 日期 -->
+          <div class="ts-box">
+            <label>时间戳 → 日期时间</label>
+            <div class="ts-input-row">
+              <div class="ts-radio-group">
+                <input type="radio" name="tsUnit" id="tsUnitS" value="s" checked>
+                <label for="tsUnitS">秒</label>
+                <input type="radio" name="tsUnit" id="tsUnitMs" value="ms">
+                <label for="tsUnitMs">毫秒</label>
+              </div>
+              <input type="text" id="tsInput" placeholder="输入时间戳…">
+            </div>
+            <div class="btn-row" style="margin-bottom:10px;">
+              <button class="btn btn-primary" id="tsToDateBtn">转换</button>
+              <button class="btn" id="tsNowBtn">📡 当前时间戳</button>
+            </div>
+            <div class="ts-result" id="tsResult">等待输入…</div>
+            <div class="btn-row" style="margin-top:8px;">
+              <button class="btn btn-copy" id="tsCopyBtn">📋 复制</button>
+            </div>
+          </div>
+
+          <!-- 日期 → 时间戳 -->
+          <div class="ts-box">
+            <label>日期时间 → 时间戳</label>
+            <div class="ts-input-row">
+              <input type="datetime-local" id="dateInput">
+            </div>
+            <div class="btn-row" style="margin-bottom:10px;">
+              <button class="btn btn-primary" id="dateToTsBtn">转换</button>
+            </div>
+            <div class="ts-result" id="dateTsResult">等待输入…</div>
+            <div class="btn-row" style="margin-top:8px;">
+              <button class="btn btn-copy" id="dateTsCopyBtn">📋 复制</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== Tab: 生成工具 ==================== -->
+    <div class="tab-panel" id="tab-generate">
+      <div class="page-header">
+        <h2>🛠 生成工具</h2>
+        <p>UUID 生成、文字转二维码</p>
+      </div>
+
+      <!-- UUID 生成 -->
+      <section class="tool-section">
+        <div class="section-header">
+          <div class="section-title"><span class="dot cyan"></span> UUID 生成</div>
+        </div>
+        <div class="textarea-group">
+          <div class="uuid-controls" style="margin-bottom:10px;">
+            <span style="font-size:13px;color:var(--text-secondary);">生成数量：</span>
+            <select id="uuidCount">
+              <option value="1">1</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <span style="flex:1"></span>
+            <button class="btn btn-primary" id="uuidGenBtn">生成</button>
+            <button class="btn btn-copy" id="uuidCopyBtn">📋 复制</button>
+            <button class="btn btn-clear" id="uuidClearBtn">清空</button>
+          </div>
+          <textarea class="mono-textarea" id="uuidOutput" placeholder="点击「生成」按钮生成 UUID…" rows="6" readonly></textarea>
+        </div>
+      </section>
+
+      <!-- 文字转二维码 -->
+      <section class="tool-section">
+        <div class="section-header">
+          <div class="section-title"><span class="dot orange"></span> 文字转二维码</div>
+        </div>
+        <div class="qr-area">
+          <div class="qr-input-area">
+            <textarea class="mono-textarea" id="qrInput" placeholder="输入要生成二维码的文本或链接…" rows="4"></textarea>
+            <div class="btn-row" style="margin-top:10px;">
+              <button class="btn btn-primary" id="qrGenBtn">生成二维码</button>
+              <button class="btn btn-clear" id="qrClearBtn">清空</button>
+            </div>
+          </div>
+          <div class="qr-output-area">
+            <div id="qrContainer">
+              <div class="placeholder">输入内容<br>点击生成</div>
+            </div>
+            <button class="btn btn-copy" id="qrDownloadBtn">⬇ 下载 PNG</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<!-- Scripts -->
+<script src="js/qrcode-lib.min.js"></script>
+<script src="js/dev-toolkit.js"></script>
+
+</body>
+</html>
