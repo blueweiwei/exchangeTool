@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>签名生成工具 - HMAC Signature Generator</title>
+<style>
+  :root {
+    --bg-primary: #0c0f15;
+    --bg-secondary: #131820;
+    --bg-card: #1a212e;
+    --bg-card-hover: #1f2737;
+    --border: #2a3448;
+    --border-active: #4cc9f0;
+    --text-primary: #e8edf5;
+    --text-secondary: #8892a8;
+    --text-muted: #5a647b;
+    --accent: #4cc9f0;
+    --accent-dim: rgba(76, 201, 240, 0.15);
+    --accent-glow: rgba(76, 201, 240, 0.25);
+    --green: #34d399;
+    --green-dim: rgba(52, 211, 153, 0.15);
+    --orange: #fbbf24;
+    --orange-dim: rgba(251, 191, 36, 0.15);
+    --red: #f87171;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -20%, rgba(76, 201, 240, 0.06), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 90%, rgba(52, 211, 153, 0.04), transparent);
+  }
+
+  /* CA Vendor Bar */
+  .ca-bar {
+    width: 100%;
+    background: rgba(12, 15, 21, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .ca-bar-inner {
+    display: flex;
+    gap: 2px;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .ca-btn {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    letter-spacing: 0.3px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+  }
+
+  .ca-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 60%;
+    height: 2.5px;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ca-btn:hover { color: var(--text-secondary); }
+
+  .ca-btn.active {
+    color: var(--accent);
+  }
+
+  .ca-btn.active::after {
+    transform: translateX(-50%) scaleX(1);
+  }
+
+  .ca-btn .ca-icon { font-size: 16px; }
+  .ca-btn .ca-name { font-weight: 700; }
+  .ca-btn .ca-tag {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: inherit;
+    opacity: 0.4;
+    letter-spacing: 0.5px;
+    margin-left: 2px;
+  }
+
+  .ca-btn.active .ca-tag { opacity: 0.6; }
+
+  .ca-btn.ca-placeholder {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .ca-btn.ca-placeholder:hover {
+    color: var(--text-muted);
+  }
+
+  /* Header */
+  .header {
+    width: 100%;
+    max-width: 960px;
+    padding: 40px 24px 0;
+    text-align: center;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.3px;
+    margin-bottom: 16px;
+  }
+
+  .header-badge svg { width: 14px; height: 14px; }
+
+  .header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+
+  .header h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  /* Container */
+  .container {
+    width: 100%;
+    max-width: 960px;
+    padding: 32px 24px 60px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: var(--transition);
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Notice */
+  .notice-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-dim);
+    border: 1px solid rgba(76, 201, 240, 0.15);
+    font-size: 13px;
+    color: var(--accent);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .notice-bar svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Form */
+  .form-row {
+    margin-bottom: 16px;
+  }
+
+  .form-row:last-child { margin-bottom: 0; }
+
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .form-control {
+    width: 100%;
+  }
+
+  .form-control textarea,
+  .form-control input[type="text"],
+  .form-control select {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    transition: var(--transition);
+    outline: none;
+  }
+
+  .form-control textarea:focus,
+  .form-control input[type="text"]:focus,
+  .form-control select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .form-control textarea { resize: vertical; min-height: 36px; }
+
+  .form-control select {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    cursor: pointer;
+    max-width: 280px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238892a8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  .form-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+
+  .form-hint strong { color: var(--accent); font-weight: 600; }
+
+  /* Output rows (readonly textareas) */
+  .output-label {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .form-control textarea[readonly] {
+    background: var(--bg-secondary);
+    cursor: default;
+  }
+
+  /* Copy button on output textareas */
+  .output-wrap {
+    position: relative;
+  }
+
+  .output-wrap textarea {
+    padding-right: 48px;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .copy-btn.copied {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-dim);
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0c0f15;
+  }
+
+  .btn-primary:hover {
+    background: #5dd4f5;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--text-muted);
+  }
+
+  .btn-success {
+    background: var(--green);
+    color: #0c0f15;
+  }
+
+  .btn-success:hover {
+    background: #4ade80;
+    box-shadow: 0 4px 16px rgba(52, 211, 153, 0.3);
+  }
+
+  .btn-danger {
+    background: var(--orange);
+    color: #0c0f15;
+  }
+
+  .btn-danger:hover {
+    background: #fcd34d;
+    box-shadow: 0 4px 16px rgba(251, 191, 36, 0.3);
+  }
+
+  /* Code display */
+  .code-block {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text-primary);
+  }
+
+  .code-block .comment { color: #6a9955; }
+  .code-block .keyword { color: #569cd6; }
+  .code-block .function { color: #dcdcaa; }
+  .code-block .string { color: #ce9178; }
+  .code-block .type { color: #4ec9b0; }
+  .code-block .number { color: #b5cea8; }
+  .code-block .flow-arrow { color: #5a647b; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 999;
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  .toast.error { background: var(--red); color: #fff; }
+  .toast.success { background: var(--green); color: #0c0f15; }
+  .toast.info { background: var(--accent); color: #0c0f15; }
+  .toast.warning { background: var(--orange); color: #0c0f15; }
+
+  /* Footer */
+  .footer {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    width: 100%;
+    max-width: 960px;
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card { animation: fadeIn 0.4s ease both; }
+  .card:nth-child(2) { animation-delay: 0.05s; }
+  .card:nth-child(3) { animation-delay: 0.1s; }
+  .card:nth-child(4) { animation-delay: 0.15s; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Code syntax highlight (dark bg) */
+  .code-dark {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border: 1px solid #333;
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .code-dark .c { color: #6a9955; }
+  .code-dark .k { color: #569cd6; }
+  .code-dark .f { color: #dcdcaa; }
+  .code-dark .s { color: #ce9178; }
+  .code-dark .t { color: #4ec9b0; }
+  .code-dark .n { color: #b5cea8; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .header { padding-top: 28px; }
+    .header h1 { font-size: 26px; }
+    .container { padding: 20px 16px 40px; }
+    .card { padding: 16px; }
+    .btn-row { flex-direction: column; }
+    .btn { justify-content: center; }
+  }
+
+  /* Section divider title for algorithm area */
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 24px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title:first-child { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<!-- CA 厂商切换栏 -->
+<div class="ca-bar">
+  <div class="ca-bar-inner">
+    <button class="ca-btn active" data-ca="bjca">
+      <span class="ca-icon">🔐</span>
+      <span class="ca-name">北京CA</span>
+      <span class="ca-tag">协同版本</span>
+    </button>
+    <button class="ca-btn" data-ca="zjca">
+      <span class="ca-icon">🀄</span>
+      <span class="ca-name">浙江CA</span>
+      <span class="ca-tag">医疗签</span>
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-badge" id="headerBadge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+    协同签名 · HMAC 离线工具
+  </div>
+  <h1><span>签名</span>生成工具</h1>
+  <p id="headerDesc">报文签名值计算。将 JSON 参数按 ASCII 字典序排序，拼接 key=value 字符串，经 HMAC 运算后 Base64 编码得到签名值。</p>
+</header>
+
+<div class="container">
+
+<!-- ===================== 北京CA 面板 ===================== -->
+<div id="bjcaPanel">
+
+  <!-- 输入面板 -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      输入参数
+    </div>
+
+    <div class="notice-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>纯离线运行，所有计算在浏览器本地完成，数据不会上传到任何服务器。</span>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">密钥（secret）</div>
+      <div class="form-control">
+        <input type="text" id="secretKey" placeholder="输入协同签名系统生成的安全码 secureCode" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">HMAC 算法</div>
+      <div class="form-control">
+        <select id="hmacAlgo">
+          <option value="HmacSHA256">HmacSHA256（推荐）</option>
+          <option value="HmacSHA1">HmacSHA1</option>
+          <option value="HmacMD5">HmacMD5</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">原数据（JSON）</div>
+      <div class="form-control">
+        <textarea id="jsonInput" rows="9" placeholder='{
+  "algo": "SM3withSM2",
+  "appId": "APP_9999...",
+  "data": "5L2g5aW9",
+  "dataType": "DATA",
+  "description": "入院记录（外科）",
+  "signAlgo": "HMAC",
+  "title": "病历签名",
+  "transId": "822367531561000960",
+  "userId": "...",
+  "version": "1.0"
+}'></textarea>
+        <div class="form-hint">
+          JSON 格式不能错，不包含 <strong>signature</strong> 字段。必填：version、signAlgo（传 "HMAC"）、appId。
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">服务地址（可选）</div>
+      <div class="form-control">
+        <input type="text" id="serviceUrl" placeholder="例如：http://ip:port/coss/xxx" />
+        <div class="form-hint">填写后自动生成 curl 命令</div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="generateBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        生成签名
+      </button>
+      <button class="btn btn-secondary" id="removeSigBtn">去除 signature</button>
+      <button class="btn btn-success" id="exampleBtn">加载示例</button>
+      <button class="btn btn-secondary" id="clearBtn">清空</button>
+    </div>
+  </div>
+
+  <!-- 输出面板 -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      输出结果
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">待签字符串（StringA）</div>
+      <div class="form-control">
+        <textarea id="stringA" rows="4" readonly placeholder='点击"生成签名"后显示排序拼接后的字符串...'></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">签名值（signature）</div>
+      <div class="form-control">
+        <textarea id="signatureResult" rows="1" readonly style="height:36px;" placeholder="HMAC + Base64 后的签名值..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">可发送结果</div>
+      <div class="form-control">
+        <div class="output-wrap">
+          <textarea id="fullResult" readonly placeholder='包含 signature 的完整 JSON，可直接发送...' style="min-height:60px;"></textarea>
+          <button class="copy-btn" id="copyFullResultBtn" title="复制完整 JSON">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">Linux curl 命令</div>
+      <div class="form-control">
+        <textarea id="curlLinux" rows="3" readonly></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">Windows curl 命令</div>
+      <div class="form-control">
+        <textarea id="curlWindows" rows="3" readonly></textarea>
+        <div class="form-hint">
+          Windows 推荐使用 <a href="https://blog.csdn.net/fxbin123/article/details/80428216" target="_blank" style="color:var(--accent);">PostMan</a> 调试。将可发送结果保存到文件后执行此命令。
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- ===================== 北京CA 面板 END ===================== -->
+
+<!-- ===================== 浙江CA 面板 ===================== -->
+<div id="zjcaPanel" style="display:none;">
+
+  <!-- 输入面板 -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      输入参数
+    </div>
+
+    <div class="notice-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>纯离线运行，所有计算在浏览器本地完成，数据不会上传到任何服务器。</span>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">appId</div>
+      <div class="form-control">
+        <input type="text" id="zjAppId" placeholder="应用 ID，例如：20250708083343A001" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">密钥（secretKey）</div>
+      <div class="form-control">
+        <input type="text" id="zjSecretKey" placeholder="安全码，例如：ae759f91f1d44ac880502aee284603d2" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">timestamp</div>
+      <div class="form-control">
+        <input type="text" id="zjTimestamp" placeholder="当前时间戳（毫秒），留空自动生成" />
+        <div class="form-hint">留空点击「生成签名」时自动填充当前时间戳</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">nonce</div>
+      <div class="form-control">
+        <input type="text" id="zjNonce" placeholder="随机字符串，留空自动生成 UUID" />
+        <div class="form-hint">留空点击「生成签名」时自动生成</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">请求方式</div>
+      <div class="form-control">
+        <select id="zjMethod">
+          <option value="POST">POST（需计算 bodyHash）</option>
+          <option value="GET">GET（需传入 requestId）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row" id="zjBodyRow">
+      <div class="form-label">请求体 JSON</div>
+      <div class="form-control">
+        <textarea id="zjBodyJson" rows="6" placeholder='{"callbackUrl":"https://example.org/","type":20}'></textarea>
+        <div class="form-hint">POST 模式必填。将计算 SHA-256 哈希作为 <strong>bodyHash</strong> 参与签名。</div>
+      </div>
+    </div>
+
+    <div class="form-row" id="zjRequestIdRow" style="display:none;">
+      <div class="form-label">requestId</div>
+      <div class="form-control">
+        <input type="text" id="zjRequestId" placeholder="例如：a3b1bc5ee66748f19192e7b47d6a8cc4" />
+        <div class="form-hint">GET 模式必填。查询回调查询结果的 requestId。</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label">服务地址（可选）</div>
+      <div class="form-control">
+        <input type="text" id="zjServiceUrl" placeholder="例如：http://192.168.0.167:8989" />
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="zjGenerateBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        生成签名
+      </button>
+      <button class="btn btn-success" id="zjExampleBtn">加载示例</button>
+      <button class="btn btn-secondary" id="zjClearBtn">清空</button>
+    </div>
+  </div>
+
+  <!-- 输出面板 -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      输出结果
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">bodyHash（SHA-256）</div>
+      <div class="form-control">
+        <textarea id="zjBodyHash" rows="1" readonly style="height:36px;" placeholder='POST 模式下显示请求体 JSON 的 SHA-256 哈希值...'></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">待签字符串（StringA）</div>
+      <div class="form-control">
+        <textarea id="zjStringA" rows="3" readonly placeholder='排序拼接后的请求头 key=value 字符串...'></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">签名值（signature · Hex）</div>
+      <div class="form-control">
+        <div class="output-wrap">
+          <textarea id="zjSignature" rows="1" readonly style="height:36px;" placeholder="HMAC-SHA256 Hex 签名值..."></textarea>
+          <button class="copy-btn" id="zjCopySigBtn" title="复制 signature">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+        <div class="form-hint"><strong>注意：</strong>浙江CA 签名输出为 <strong>Hex（小写十六进制）</strong>，非 Base64。</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">完整请求头</div>
+      <div class="form-control">
+        <div class="output-wrap">
+          <textarea id="zjHeaders" rows="7" readonly placeholder='包含 appId、timestamp、nonce、bodyHash/requestId、signature 的完整 HTTP 请求头...'></textarea>
+          <button class="copy-btn" id="zjCopyHeadersBtn" title="复制请求头">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-label output-label">Linux curl 命令</div>
+      <div class="form-control">
+        <textarea id="zjCurl" rows="6" readonly></textarea>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- ===================== 浙江CA 面板 END ===================== -->
+
+  <!-- 核心算法展示 -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      核心算法逻辑（供核验）
+    </div>
+
+    <div id="bjcaAlgo">
+    <div class="code-block">
+┌─────────────────────────────────────────────────────────────┐
+│                    签名生成流程                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ① 解析 JSON 为对象 M                                       │
+│     → 删除 M 中的 signature 字段（如果有）                    │
+│                                                             │
+│  ② 获取 M 所有 key，按 ASCII 码从小到大排序（字典序）          │
+│     → Object.keys(M).sort()  →  ['algo','appId','data',...]  │
+│                                                             │
+│  ③ 遍历排序后的 keys，用 key=value 拼接（不 URL 编码）        │
+│     → algo=SM3withSM2&amp;appId=APP_9999&amp;data=5L2g5aW9&amp;...      │
+│     → 得到 StringA                                           │
+│                                                             │
+│  ④ 对 StringA 做 HMAC 运算                                  │
+│     → secret = 安全码 secureCode                             │
+│     → 算法：HmacSHA256（或 HmacSHA1 / HmacMD5）               │
+│     → byte[] signBytes = mac.doFinal(StringA.getBytes())     │
+│                                                             │
+│  ⑤ Base64 编码 → 得到 signature                              │
+│     → String signature = Base64(signBytes)                   │
+│                                                             │
+│  ⑥ 将 signature 写回 JSON 对象，输出完整报文                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+    </div>
+
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      JavaScript 核心代码
+    </div>
+    <div class="code-dark"><span class="k">async function</span> <span class="f">generateSignature</span>(secret, jsonStr, algo) {
+    <span class="c">// ① 解析 JSON，删除 signature 字段</span>
+    <span class="k">let</span> data = <span class="f">JSON.parse</span>(jsonStr);
+    <span class="k">delete</span> data.signature;
+    <span class="c">// ② keys 按 ASCII 字典序排序</span>
+    <span class="k">let</span> keys = <span class="f">Object.keys</span>(data).<span class="f">sort</span>();
+    <span class="c">// ③ 拼接 key=value&amp;key=value... → StringA</span>
+    <span class="k">let</span> pairs = [];
+    <span class="k">for</span> (<span class="k">let</span> k <span class="k">of</span> keys) {
+        <span class="k">let</span> v = data[k];
+        <span class="k">if</span> (v === <span class="k">null</span> || v === <span class="k">undefined</span>) <span class="k">continue</span>;
+        <span class="k">let</span> strVal = <span class="k">typeof</span> v === <span class="s">'object'</span> ? <span class="f">JSON.stringify</span>(v) : <span class="f">String</span>(v);
+        pairs.<span class="f">push</span>(k + <span class="s">'='</span> + strVal);
+    }
+    <span class="k">let</span> stringA = pairs.<span class="f">join</span>(<span class="s">'&'</span>);
+    <span class="c">// ④ HMAC 计算（Web Crypto API）</span>
+    <span class="k">let</span> key = <span class="k">await</span> crypto.subtle.<span class="f">importKey</span>(
+        <span class="s">'raw'</span>, <span class="f">TextEncoder</span>(secret),
+        { name: <span class="s">'HMAC'</span>, hash: { name: <span class="s">'SHA-256'</span> } }, ...);
+    <span class="k">let</span> signBytes = <span class="k">await</span> crypto.subtle.<span class="f">sign</span>(<span class="s">'HMAC'</span>, key, <span class="f">TextEncoder</span>(stringA));
+    <span class="c">// ⑤ Base64 编码 → signature</span>
+    <span class="k">let</span> signature = <span class="f">btoa</span>(<span class="f">String.fromCharCode</span>(...<span class="k">new</span> <span class="f">Uint8Array</span>(signBytes)));
+    <span class="c">// ⑥ 写回 JSON</span>
+    data.signature = signature;
+    <span class="k">return</span> { stringA, signature, fullJson: <span class="f">JSON.stringify</span>(data, <span class="k">null</span>, <span class="n">2</span>) };
+}</div>
+
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Java 原始实现（对照）
+    </div>
+    <div class="code-dark"><span class="k">public static</span> <span class="t">String</span> <span class="f">signature</span>(<span class="t">Object</span> o, <span class="t">String</span> secret) {
+    <span class="c">// 解析为 TreeMap → 自动按 ASCII 字典序排序</span>
+    <span class="t">Map</span>&lt;<span class="t">String</span>, <span class="t">String</span>&gt; map = JSONUtils.<span class="f">parse</span>(
+        JSONUtils.<span class="f">toString</span>(o), TreeMap.<span class="k">class</span>);
+    <span class="c">// 拼接 key=value&amp;key=value...</span>
+    <span class="t">StringBuilder</span> sb = <span class="k">new</span> <span class="f">StringBuilder</span>();
+    <span class="k">for</span> (<span class="t">Map.Entry</span> entry : map.<span class="f">entrySet</span>()) {
+        <span class="k">if</span> (sb.<span class="f">length</span>() &gt; <span class="n">0</span>) sb.<span class="f">append</span>(<span class="s">'&'</span>);
+        sb.<span class="f">append</span>(entry.<span class="f">getKey</span>()).<span class="f">append</span>(<span class="s">'='</span>).<span class="f">append</span>(entry.<span class="f">getValue</span>());
+    }
+    <span class="t">String</span> data = sb.<span class="f">toString</span>();
+    <span class="c">// HMAC-SHA256</span>
+    <span class="t">SecretKeySpec</span> signingKey = <span class="k">new</span> <span class="f">SecretKeySpec</span>(
+        secret.<span class="f">getBytes</span>(), <span class="s">"HmacSHA256"</span>);
+    <span class="t">Mac</span> mac = <span class="t">Mac</span>.<span class="f">getInstance</span>(<span class="s">"HmacSHA256"</span>);
+    mac.<span class="f">init</span>(signingKey);
+    <span class="k">byte</span>[] signBytes = mac.<span class="f">doFinal</span>(data.<span class="f">getBytes</span>(<span class="s">"UTF-8"</span>));
+    <span class="c">// Base64 → signature</span>
+    <span class="k">return</span> Base64.<span class="f">getEncoder</span>().<span class="f">encodeToString</span>(signBytes);
+}</div>
+    </div>
+
+    <div id="zjcaAlgo" style="display:none;">
+    <div class="code-block">
+┌─────────────────────────────────────────────────────────────┐
+│                 浙江CA 签名生成流程                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  【POST】                                                    │
+│  ① 计算 bodyHash = SHA-256(请求体 JSON) → 小写 hex          │
+│                                                             │
+│  【GET】                                                     │
+│  ① 使用传入的 requestId                                      │
+│                                                             │
+│  ② 组装请求头参数（TreeMap 自动排序）                         │
+│     → {appId, timestamp, nonce, bodyHash|requestId}          │
+│                                                             │
+│  ③ 按 ASCII 字典序拼接 key=value&amp;key=value... (不 URL 编码)  │
+│     → appId=xxx&amp;bodyHash=xxx&amp;nonce=xxx&amp;timestamp=xxx          │
+│     → 得到 StringA                                           │
+│                                                             │
+│  ④ HMAC-SHA256(StringA, secretKey)                          │
+│     → bytesToHex( )  → 小写 hex 字符串                       │
+│     → 得到 signature（注意：不同于北京CA的 Base64）            │
+│                                                             │
+│  ⑤ signature 作为 HTTP Header 发送                           │
+│                                                             │
+│  对应 Java 代码：                                             │
+│  String baseString = MapUtil.join(new TreeMap&lt;&gt;(params),     │
+│      "&amp;", "=", true);                                        │
+│  String signature = hmacSHA256Hex(baseString, secretKey);    │
+└─────────────────────────────────────────────────────────────┘
+    </div>
+
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      JavaScript 核心代码
+    </div>
+    <div class="code-dark"><span class="k">async function</span> <span class="f">zjGenerateSignature</span>() {
+    <span class="c">// ① 组装请求头参数</span>
+    <span class="k">let</span> params = { appId, timestamp, nonce };
+    <span class="k">if</span> (method === <span class="s">'POST'</span>) {
+        params.bodyHash = <span class="k">await</span> <span class="f">sha256Hex</span>(bodyJson);
+    } <span class="k">else</span> { params.requestId = requestId; }
+    <span class="c">// ② TreeMap 排序 → key=value 拼接</span>
+    <span class="k">let</span> keys = <span class="f">Object.keys</span>(params).<span class="f">sort</span>();
+    <span class="k">let</span> stringA = keys.<span class="f">map</span>(k =&gt; k + <span class="s">'='</span> + params[k]).<span class="f">join</span>(<span class="s">'&'</span>);
+    <span class="c">// ③ HMAC-SHA256 → Hex（! 非 Base64）</span>
+    <span class="k">let</span> key = <span class="k">await</span> crypto.subtle.<span class="f">importKey</span>(<span class="s">'raw'</span>, <span class="f">TextEncoder</span>(secretKey),
+        { name: <span class="s">'HMAC'</span>, hash: { name: <span class="s">'SHA-256'</span> } }, ...);
+    <span class="k">let</span> signBytes = <span class="k">await</span> crypto.subtle.<span class="f">sign</span>(<span class="s">'HMAC'</span>, key, <span class="f">TextEncoder</span>(stringA));
+    <span class="c">// ④ bytes → hex 小写字符串</span>
+    <span class="k">let</span> signature = <span class="f">Array.from</span>(<span class="k">new</span> <span class="f">Uint8Array</span>(signBytes))
+        .<span class="f">map</span>(b =&gt; b.<span class="f">toString</span>(<span class="n">16</span>).<span class="f">padStart</span>(<span class="n">2</span>, <span class="s">'0'</span>)).<span class="f">join</span>(<span class="s">''</span>);
+    <span class="k">return</span> { stringA, signature, ... };
+}</div>
+
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Java 原始实现（对照）
+    </div>
+    <div class="code-dark"><span class="k">public static</span> <span class="t">String</span> <span class="f">generateSignature</span>(<span class="t">Map</span>&lt;<span class="t">String</span>,<span class="t">String</span>&gt; params, <span class="t">String</span> secretKey) {
+    <span class="t">String</span> baseString = <span class="t">MapUtil</span>.<span class="f">join</span>(
+        <span class="k">new</span> <span class="t">TreeMap</span>&lt;&gt;(params), <span class="s">"&"</span>, <span class="s">"="</span>, <span class="k">true</span>);
+    <span class="k">return</span> <span class="f">hmacSHA256Hex</span>(baseString, secretKey);
+}
+<span class="k">public static</span> <span class="t">String</span> <span class="f">hmacSHA256Hex</span>(<span class="t">String</span> message, <span class="t">String</span> secretKey) {
+    <span class="t">Mac</span> mac = <span class="t">Mac</span>.<span class="f">getInstance</span>(<span class="s">"HmacSHA256"</span>);
+    <span class="t">SecretKeySpec</span> keySpec = <span class="k">new</span> <span class="t">SecretKeySpec</span>(
+        secretKey.<span class="f">getBytes</span>(<span class="s">"UTF-8"</span>), <span class="s">"HmacSHA256"</span>);
+    mac.<span class="f">init</span>(keySpec);
+    <span class="k">return</span> <span class="f">bytesToHex</span>(mac.<span class="f">doFinal</span>(message.<span class="f">getBytes</span>(<span class="s">"UTF-8"</span>)));
+}
+<span class="c">// SHA-256 哈希（用于 bodyHash）</span>
+<span class="k">public static</span> <span class="t">String</span> <span class="f">sha256Hex</span>(<span class="t">String</span> input) {
+    <span class="t">MessageDigest</span> digest = <span class="t">MessageDigest</span>.<span class="f">getInstance</span>(<span class="s">"SHA-256"</span>);
+    <span class="k">return</span> <span class="f">bytesToHex</span>(digest.<span class="f">digest</span>(input.<span class="f">getBytes</span>(<span class="s">"UTF-8"</span>)));
+}</div>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer">
+  数据仅在本地浏览器中处理，不会上传到任何服务器。
+</footer>
+
+<script>
+(function () {
+    'use strict';
+
+    // ======================== DOM 引用 ========================
+    const secretKeyEl   = document.getElementById('secretKey');
+    const hmacAlgoEl    = document.getElementById('hmacAlgo');
+    const jsonInputEl   = document.getElementById('jsonInput');
+    const serviceUrlEl  = document.getElementById('serviceUrl');
+    const generateBtn   = document.getElementById('generateBtn');
+    const clearBtn      = document.getElementById('clearBtn');
+    const exampleBtn    = document.getElementById('exampleBtn');
+    const stringAEl     = document.getElementById('stringA');
+    const signatureEl   = document.getElementById('signatureResult');
+    const fullResultEl  = document.getElementById('fullResult');
+    const curlLinuxEl   = document.getElementById('curlLinux');
+    const curlWindowsEl = document.getElementById('curlWindows');
+    const removeSigBtn  = document.getElementById('removeSigBtn');
+    const copyFullResultBtn = document.getElementById('copyFullResultBtn');
+
+    // ======================== Toast ========================
+    const toast = document.getElementById('toast');
+    let toastTimer = null;
+
+    function showToast(msg, type) {
+        type = type || 'info';
+        toast.textContent = msg;
+        toast.className = 'toast ' + type + ' show';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+            toast.classList.remove('show');
+        }, 2500);
+    }
+
+    // ======================== 示例数据 ========================
+    const EXAMPLE_JSON = JSON.stringify({
+        algo: "SM3withSM2",
+        appId: "APP_9999<待更换为正式>",
+        data: "5L2g5aW9",
+        dataType: "DATA",
+        description: "05.28 09:28  入院记录（外科）",
+        signAlgo: "HMAC",
+        title: "病历签名",
+        transId: "822367531561000960",
+        userId: "60906853fa7473e438df5561d7<待更换为正式>1cde4cce2dfee6221677",
+        version: "1.0"
+    }, null, 2);
+
+    const EXAMPLE_SECRET = "请填入正式的安全码";
+
+    // ======================== HMAC 计算核心 ========================
+
+    /**
+     * HMAC 计算（Web Crypto API）
+     * 支持 HmacSHA1、HmacSHA256
+     */
+    async function hmacWithCrypto(message, secret, algo) {
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(secret);
+        const msgData = encoder.encode(message);
+
+        let hashName;
+        if (algo === 'HmacSHA1') hashName = 'SHA-1';
+        else if (algo === 'HmacSHA256') hashName = 'SHA-256';
+        else throw new Error('Unsupported algo for Web Crypto: ' + algo);
+
+        const key = await crypto.subtle.importKey(
+            'raw', keyData,
+            { name: 'HMAC', hash: { name: hashName } },
+            false,
+            ['sign']
+        );
+        const sig = await crypto.subtle.sign('HMAC', key, msgData);
+        return btoa(String.fromCharCode.apply(null, new Uint8Array(sig)));
+    }
+
+    /**
+     * HMAC-MD5 纯 JS 实现（不使用 Web Crypto，因为不支持 MD5）
+     * 标准 HMAC-MD5 算法 (RFC 2104)
+     */
+    function hmacMD5(message, secret) {
+        // ---- MD5 实现 ----
+        function md5(s) {
+            function md5cycle(x, k) {
+                var a = x[0], b = x[1], c = x[2], d = x[3];
+                a = ff(a, b, c, d, k[ 0],  7, -680876936);
+                d = ff(d, a, b, c, k[ 1], 12, -389564586);
+                c = ff(c, d, a, b, k[ 2], 17,  606105819);
+                b = bb(b, c, d, a, k[ 3], 22, -1044525330);
+                a = ff(a, b, c, d, k[ 4],  7, -176418897);
+                d = ff(d, a, b, c, k[ 5], 12,  1200080426);
+                c = ff(c, d, a, b, k[ 6], 17, -1473231341);
+                b = bb(b, c, d, a, k[ 7], 22, -45705983);
+                a = ff(a, b, c, d, k[ 8],  7,  1770035416);
+                d = ff(d, a, b, c, k[ 9], 12, -1958414417);
+                c = ff(c, d, a, b, k[10], 17, -42063);
+                b = bb(b, c, d, a, k[11], 22, -1990404162);
+                a = ff(a, b, c, d, k[12],  7,  1804603682);
+                d = ff(d, a, b, c, k[13], 12, -40341101);
+                c = ff(c, d, a, b, k[14], 17, -1502002290);
+                b = bb(b, c, d, a, k[15], 22,  1236535329);
+                a = gg(a, b, c, d, k[ 1],  5, -165796510);
+                d = gg(d, a, b, c, k[ 6],  9, -1069501632);
+                c = gg(c, d, a, b, k[11], 14,  643717713);
+                b = hh(b, c, d, a, k[ 0], 20, -373897302);
+                a = gg(a, b, c, d, k[ 5],  5, -701558691);
+                d = gg(d, a, b, c, k[10],  9,  38016083);
+                c = gg(c, d, a, b, k[15], 14, -660478335);
+                b = hh(b, c, d, a, k[ 4], 20, -405537848);
+                a = gg(a, b, c, d, k[ 9],  5,  568446438);
+                d = gg(d, a, b, c, k[14],  9, -1019803690);
+                c = gg(c, d, a, b, k[ 3], 14, -187363961);
+                b = hh(b, c, d, a, k[ 8], 20,  1163531501);
+                a = gg(a, b, c, d, k[13],  5, -1444681467);
+                d = gg(d, a, b, c, k[ 2],  9, -51403784);
+                c = gg(c, d, a, b, k[ 7], 14,  1735328473);
+                b = hh(b, c, d, a, k[12], 20, -1926607734);
+                a = ii(a, b, c, d, k[ 5],  4, -378558);
+                d = ii(d, a, b, c, k[ 8], 11, -2022574463);
+                c = ii(c, d, a, b, k[11], 16,  1839030562);
+                b = hh(b, c, d, a, k[14], 23, -35309556);
+                a = ii(a, b, c, d, k[ 1],  4, -1530992060);
+                d = ii(d, a, b, c, k[ 4], 11,  1272893353);
+                c = ii(c, d, a, b, k[ 7], 16, -155497632);
+                b = hh(b, c, d, a, k[10], 23, -1094730640);
+                a = ii(a, b, c, d, k[13],  4,  681279174);
+                d = ii(d, a, b, c, k[ 0], 11, -358537222);
+                c = ii(c, d, a, b, k[ 3], 16, -722521979);
+                b = hh(b, c, d, a, k[ 6], 23,  76029189);
+                a = ii(a, b, c, d, k[ 9],  4, -640364487);
+                d = ii(d, a, b, c, k[12], 11, -421815835);
+                c = ii(c, d, a, b, k[15], 16,  530742520);
+                b = hh(b, c, d, a, k[ 2], 23, -995338651);
+                x[0] = add32(a, x[0]); x[1] = add32(b, x[1]);
+                x[2] = add32(c, x[2]); x[3] = add32(d, x[3]);
+            }
+            function cmn(q, a, b, x, s, t) { return add32(bitRotateLeft(add32(a, q, x, t), s), b); }
+            function ff(a, b, c, d, x, s, t) { return cmn(bitOr(bitAnd(b, c), bitAnd(bitNot(b), d)), a, b, x, s, t); }
+            function gg(a, b, c, d, x, s, t) { return cmn(bitOr(bitAnd(b, d), bitAnd(c, bitNot(d))), a, b, x, s, t); }
+            function hh(a, b, c, d, x, s, t) { return cmn(bitXor(b, c, d), a, b, x, s, t); }
+            function ii(a, b, c, d, x, s, t) { return cmn(bitXor(c, bitOr(b, bitNot(d))), a, b, x, s, t); }
+            function bitRotateLeft(num, cnt) { return (num << cnt) | (num >>> (32 - cnt)); }
+            function bitAnd(a, b) { return a & b; }
+            function bitNot(a) { return ~a & 0xFFFFFFFF; }
+            function bitOr(a, b) { return a | b; }
+            function bitXor(a, b, c) { return (a ^ b ^ c) >>> 0; }
+
+            function add32() {
+                var sum = 0, i;
+                for (i = 0; i < arguments.length; i++) {
+                    sum += arguments[i];
+                    sum = (sum & 0xFFFFFFFF) + (sum >>> 32);
+                }
+                return sum >>> 0;
+            }
+            function md5blk(s) {
+                var md5blks = [], i;
+                for (i = 0; i < 64; i += 4) {
+                    md5blks[i >> 2] = s.charCodeAt(i) + (s.charCodeAt(i + 1) << 8) + (s.charCodeAt(i + 2) << 16) + (s.charCodeAt(i + 3) << 24);
+                }
+                return md5blks;
+            }
+            function md51(s) {
+                var n = s.length, state = [1732584193, -271733879, -1732584194, 271733878], i, len;
+                for (i = 64; i <= n; i += 64) {
+                    md5cycle(state, md5blk(s.substring(i - 64, i)));
+                }
+                s = s.substring(i - 64);
+                len = s.length;
+                s += String.fromCharCode(0x80);
+                while (s.length % 64 !== 56) s += String.fromCharCode(0);
+                for (i = 0; i < 8; i++) s += String.fromCharCode((n * 8) >>> (i * 8) & 0xFF);
+                for (i = 0; i < s.length; i += 64) {
+                    md5cycle(state, md5blk(s.substring(i, i + 64)));
+                }
+                var hex = '';
+                for (i = 0; i < 4; i++) {
+                    hex += padHex((state[i] >>> 0).toString(16));
+                }
+                return hex;
+            }
+            function padHex(s) {
+                while (s.length < 8) s = '0' + s;
+                return s;
+            }
+            return md51(s);
+        }
+
+        // ---- HMAC-MD5: RFC 2104 ----
+        function hmac_md5(text, key) {
+            var blockSize = 64;
+            var keyBytes, i;
+
+            if (key.length > blockSize) {
+                key = md5(key);
+            }
+
+            keyBytes = [];
+            for (i = 0; i < blockSize; i++) {
+                keyBytes[i] = i < key.length ? key.charCodeAt(i) : 0;
+            }
+
+            var ipad = [], opad = [];
+            for (i = 0; i < blockSize; i++) {
+                ipad[i] = keyBytes[i] ^ 0x36;
+                opad[i] = keyBytes[i] ^ 0x5C;
+            }
+
+            var ipadStr = String.fromCharCode.apply(null, ipad);
+            var opadStr = String.fromCharCode.apply(null, opad);
+
+            var inner = md5(ipadStr + text);
+            var outer = md5(opadStr + inner);
+
+            return outer;
+        }
+
+        return hexToBase64(hmac_md5(message, secret));
+    }
+
+    function hexToBase64(hexStr) {
+        var bytes = [];
+        for (var i = 0; i < hexStr.length; i += 2) {
+            bytes.push(parseInt(hexStr.substring(i, i + 2), 16));
+        }
+        return btoa(String.fromCharCode.apply(null, bytes));
+    }
+
+    // ======================== 签名生成主逻辑 ========================
+
+    async function generateSignature(secret, jsonStr, algo) {
+        var data;
+        try {
+            data = JSON.parse(jsonStr);
+        } catch (e) {
+            throw new Error('JSON 解析失败：' + e.message);
+        }
+
+        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+            throw new Error('JSON 数据必须是一个对象（Object）');
+        }
+
+        delete data.signature;
+
+        var keys = Object.keys(data).sort();
+
+        var pairs = [];
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            var v = data[k];
+            if (v === null || v === undefined) continue;
+            var strVal;
+            if (typeof v === 'object') {
+                strVal = JSON.stringify(v);
+            } else if (typeof v === 'number' || typeof v === 'boolean') {
+                strVal = String(v);
+            } else {
+                strVal = v;
+            }
+            pairs.push(k + '=' + strVal);
+        }
+        var stringA = pairs.join('&');
+
+        var signature;
+        if (algo === 'HmacMD5') {
+            signature = hmacMD5(stringA, secret);
+        } else {
+            signature = await hmacWithCrypto(stringA, secret, algo);
+        }
+
+        var resultData = JSON.parse(JSON.stringify(data));
+        resultData.signature = signature;
+
+        return {
+            stringA: stringA,
+            signature: signature,
+            fullJson: JSON.stringify(resultData, null, 2)
+        };
+    }
+
+    // ======================== 事件处理 ========================
+
+    // 自动撑高 textarea 适应内容
+    function autoGrow(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+
+    generateBtn.addEventListener('click', async function () {
+        var secret = secretKeyEl.value.trim();
+        var jsonStr = jsonInputEl.value.trim();
+        var algo = hmacAlgoEl.value;
+        var url = serviceUrlEl.value.trim();
+
+        if (!secret) {
+            showToast('请输入密钥（secret）', 'warning');
+            return;
+        }
+        if (!jsonStr) {
+            showToast('请输入原数据（JSON）', 'warning');
+            return;
+        }
+
+        try {
+            JSON.parse(jsonStr);
+        } catch (e) {
+            showToast('JSON 格式错误：' + e.message, 'error');
+            return;
+        }
+
+        try {
+            var result = await generateSignature(secret, jsonStr, algo);
+
+            stringAEl.value    = result.stringA;
+            signatureEl.value  = result.signature;
+            fullResultEl.value = result.fullJson;
+            autoGrow(fullResultEl);
+
+            if (url) {
+                var curlLinux = "curl -X POST \\\n" +
+                    "  --header 'Content-Type: application/json' \\\n" +
+                    "  --header 'Accept: application/json' \\\n" +
+                    "  -d '" + result.fullJson.replace(/'/g, "'\\''") + "' \\\n" +
+                    "  \"" + url + "\"";
+                curlLinuxEl.value = curlLinux;
+
+                var curlWindows = "curl -X POST --header Content-Type:application/json --header Accept:application/json --data @数据文件名.txt " + url;
+                curlWindowsEl.value = curlWindows;
+            } else {
+                curlLinuxEl.value   = '（请填写服务地址后重新生成）';
+                curlWindowsEl.value = '（请填写服务地址后重新生成）';
+            }
+
+            showToast('签名生成成功！', 'success');
+        } catch (e) {
+            showToast('签名生成失败：' + e.message, 'error');
+        }
+    });
+
+    clearBtn.addEventListener('click', function () {
+        secretKeyEl.value    = '';
+        hmacAlgoEl.value     = 'HmacSHA256';
+        jsonInputEl.value    = '';
+        serviceUrlEl.value   = '';
+        stringAEl.value      = '';
+        signatureEl.value    = '';
+        fullResultEl.value   = '';
+        curlLinuxEl.value    = '';
+        curlWindowsEl.value  = '';
+        showToast('已清空所有内容', 'info');
+    });
+
+    removeSigBtn.addEventListener('click', function () {
+        var raw = jsonInputEl.value.trim();
+        if (!raw) {
+            showToast('请先填入 JSON 数据', 'warning');
+            return;
+        }
+        try {
+            var obj = JSON.parse(raw);
+            if (obj.hasOwnProperty('signature')) {
+                delete obj.signature;
+                jsonInputEl.value = JSON.stringify(obj, null, 2);
+                showToast('signature 字段已去除', 'success');
+            } else {
+                showToast('JSON 中不包含 signature 字段', 'info');
+            }
+        } catch (e) {
+            showToast('JSON 格式错误：' + e.message, 'error');
+        }
+    });
+
+    // 复制可发送结果
+    copyFullResultBtn.addEventListener('click', async function () {
+        var text = fullResultEl.value;
+        if (!text) {
+            showToast('没有可复制的内容', 'warning');
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(text);
+            var orig = copyFullResultBtn.innerHTML;
+            copyFullResultBtn.classList.add('copied');
+            copyFullResultBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            showToast('完整 JSON 已复制到剪贴板', 'success');
+            setTimeout(function () {
+                copyFullResultBtn.classList.remove('copied');
+                copyFullResultBtn.innerHTML = orig;
+            }, 2000);
+        } catch (e) {
+            showToast('复制失败，请手动选择复制', 'error');
+        }
+    });
+
+    exampleBtn.addEventListener('click', function () {
+        jsonInputEl.value  = EXAMPLE_JSON;
+        secretKeyEl.value  = EXAMPLE_SECRET;
+        serviceUrlEl.value = '';
+        stringAEl.value    = '';
+        signatureEl.value  = '';
+        fullResultEl.value = '';
+        curlLinuxEl.value   = '';
+        curlWindowsEl.value = '';
+        showToast('已加载示例数据', 'info');
+    });
+
+    // ======================== CA 切换逻辑 ========================
+    const caBtns = document.querySelectorAll('.ca-btn[data-ca]');
+    const bjcaPanel = document.getElementById('bjcaPanel');
+    const zjcaPanel = document.getElementById('zjcaPanel');
+    const bjcaAlgo = document.getElementById('bjcaAlgo');
+    const zjcaAlgo = document.getElementById('zjcaAlgo');
+    const headerBadge = document.getElementById('headerBadge');
+    const headerDesc = document.getElementById('headerDesc');
+
+    function switchCA(ca) {
+        caBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.ca === ca); });
+        var isBj = ca === 'bjca';
+        bjcaPanel.style.display = isBj ? '' : 'none';
+        zjcaPanel.style.display = isBj ? 'none' : '';
+        bjcaAlgo.style.display = isBj ? '' : 'none';
+        zjcaAlgo.style.display = isBj ? 'none' : '';
+        if (isBj) {
+            headerBadge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg> 协同签名 · HMAC 离线工具';
+            headerDesc.textContent = '报文签名值计算。将 JSON 参数按 ASCII 字典序排序，拼接 key=value 字符串，经 HMAC 运算后 Base64 编码得到签名值。';
+        } else {
+            headerBadge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg> 浙江CA · 医疗签 HMAC 离线工具';
+            headerDesc.textContent = 'HTTP 请求头签名计算。将请求头参数按 ASCII 字典序排序，HMAC-SHA256 运算后输出 Hex 签名值。';
+        }
+    }
+
+    caBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () { switchCA(btn.dataset.ca); });
+    });
+
+    // ======================== 浙江CA ========================
+    // DOM 引用
+    var zj = {};
+    zj.appId      = document.getElementById('zjAppId');
+    zj.secretKey  = document.getElementById('zjSecretKey');
+    zj.timestamp  = document.getElementById('zjTimestamp');
+    zj.nonce      = document.getElementById('zjNonce');
+    zj.method     = document.getElementById('zjMethod');
+    zj.bodyJson   = document.getElementById('zjBodyJson');
+    zj.requestId  = document.getElementById('zjRequestId');
+    zj.serviceUrl = document.getElementById('zjServiceUrl');
+    zj.bodyHash   = document.getElementById('zjBodyHash');
+    zj.stringA    = document.getElementById('zjStringA');
+    zj.signature  = document.getElementById('zjSignature');
+    zj.headers    = document.getElementById('zjHeaders');
+    zj.curl       = document.getElementById('zjCurl');
+    zj.copySig    = document.getElementById('zjCopySigBtn');
+    zj.copyHdrs   = document.getElementById('zjCopyHeadersBtn');
+    zj.bodyRow    = document.getElementById('zjBodyRow');
+    zj.reqIdRow   = document.getElementById('zjRequestIdRow');
+
+    // POST/GET 切换
+    zj.method.addEventListener('change', function () {
+        if (zj.method.value === 'POST') {
+            zj.bodyRow.style.display = '';
+            zj.reqIdRow.style.display = 'none';
+        } else {
+            zj.bodyRow.style.display = 'none';
+            zj.reqIdRow.style.display = '';
+        }
+    });
+
+    // SHA-256
+    function sha256Hex(input) {
+        return crypto.subtle.digest('SHA-256', new TextEncoder().encode(input)).then(function (hash) {
+            return Array.from(new Uint8Array(hash)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        });
+    }
+
+    // JSON 序列化时按 key 排序（对齐 Java MapSortField）
+    function sortedJsonStringify(obj) {
+        if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return JSON.stringify(obj);
+        var keys = Object.keys(obj).sort();
+        return '{' + keys.map(function (k) { return JSON.stringify(k) + ':' + sortedJsonStringify(obj[k]); }).join(',') + '}';
+    }
+
+    // HMAC-SHA256 → Hex
+    function hmacSHA256Hex(message, secretKey) {
+        return crypto.subtle.importKey('raw', new TextEncoder().encode(secretKey), { name: 'HMAC', hash: { name: 'SHA-256' } }, false, ['sign']).then(function (key) {
+            return crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+        }).then(function (sig) {
+            return Array.from(new Uint8Array(sig)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        });
+    }
+
+    // 生成签名（浙江CA）
+    function zjGenerateSignature() {
+        var appId = zj.appId.value.trim();
+        var secretKey = zj.secretKey.value.trim();
+        var timestamp = zj.timestamp.value.trim();
+        var nonce = zj.nonce.value.trim();
+        var method = zj.method.value;
+        var bodyJson = zj.bodyJson.value.trim();
+        var requestId = zj.requestId.value.trim();
+        var serviceUrl = zj.serviceUrl.value.trim();
+
+        if (!timestamp) { timestamp = String(Date.now()); zj.timestamp.value = timestamp; }
+        if (!nonce) {
+            nonce = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+            zj.nonce.value = nonce;
+        }
+
+        if (!appId) { showToast('请输入 appId', 'warning'); return Promise.reject(); }
+        if (!secretKey) { showToast('请输入密钥 secretKey', 'warning'); return Promise.reject(); }
+
+        var params = {};
+        params.appId = appId;
+        params.timestamp = timestamp;
+        params.nonce = nonce;
+
+        var p = Promise.resolve();
+        if (method === 'POST') {
+            if (!bodyJson) { showToast('POST 模式请输入请求体 JSON', 'warning'); return Promise.reject(); }
+            try { JSON.parse(bodyJson); } catch (e) { showToast('请求体 JSON 格式错误', 'error'); return Promise.reject(); }
+            p = sha256Hex(sortedJsonStringify(JSON.parse(bodyJson))).then(function (hash) {
+                params.bodyHash = hash;
+                zj.bodyHash.value = hash;
+                autoGrow(zj.bodyHash);
+            });
+        } else {
+            if (!requestId) { showToast('GET 模式请输入 requestId', 'warning'); return Promise.reject(); }
+            params.requestId = requestId;
+            zj.bodyHash.value = '(GET 模式无 bodyHash)';
+            autoGrow(zj.bodyHash);
+        }
+
+        return p.then(function () {
+            var keys = Object.keys(params).sort();
+            var pairs = keys.map(function (k) { return k + '=' + params[k]; });
+            var stringA = pairs.join('&');
+
+            return hmacSHA256Hex(stringA, secretKey).then(function (signatureHex) {
+                zj.stringA.value = stringA;
+                autoGrow(zj.stringA);
+                zj.signature.value = signatureHex;
+                autoGrow(zj.signature);
+
+                var hdrs = [];
+                hdrs.push('appId: ' + appId);
+                hdrs.push('timestamp: ' + timestamp);
+                hdrs.push('nonce: ' + nonce);
+                if (method === 'POST') hdrs.push('bodyHash: ' + params.bodyHash);
+                else hdrs.push('requestId: ' + requestId);
+                hdrs.push('signature: ' + signatureHex);
+                zj.headers.value = hdrs.join('\n');
+                autoGrow(zj.headers);
+
+                if (serviceUrl) {
+                    var path = '/openapi/qrcode/' + (method === 'POST' ? 'getQrCode' : 'getCallbackData?requestId=' + requestId);
+                    var curl;
+                    if (method === 'POST') {
+                        curl = 'curl -X POST \\\n  "' + serviceUrl + path + '" \\\n  --header "Content-Type: application/json" \\\n  --header "appId: ' + appId + '" \\\n  --header "timestamp: ' + timestamp + '" \\\n  --header "nonce: ' + nonce + '" \\\n  --header "signature: ' + signatureHex + '" \\\n  -d \'' + bodyJson.replace(/'/g, "'\\''") + '\'';
+                    } else {
+                        curl = 'curl -X GET \\\n  "' + serviceUrl + path + '" \\\n  --header "appId: ' + appId + '" \\\n  --header "timestamp: ' + timestamp + '" \\\n  --header "nonce: ' + nonce + '" \\\n  --header "signature: ' + signatureHex + '"';
+                    }
+                    zj.curl.value = curl;
+                } else {
+                    zj.curl.value = '（请填写服务地址后重新生成）';
+                }
+                autoGrow(zj.curl);
+            });
+        });
+    }
+
+    // 浙江CA 事件绑定
+    document.getElementById('zjGenerateBtn').addEventListener('click', function () {
+        zjGenerateSignature().then(function () { showToast('签名生成成功！', 'success'); }).catch(function (e) { if (e) showToast('签名生成失败：' + e.message, 'error'); });
+    });
+
+    document.getElementById('zjClearBtn').addEventListener('click', function () {
+        zj.appId.value = ''; zj.secretKey.value = ''; zj.timestamp.value = ''; zj.nonce.value = '';
+        zj.bodyJson.value = ''; zj.requestId.value = ''; zj.serviceUrl.value = '';
+        zj.bodyHash.value = ''; zj.stringA.value = ''; zj.signature.value = '';
+        zj.headers.value = ''; zj.curl.value = '';
+        zj.method.value = 'POST'; zj.bodyRow.style.display = ''; zj.reqIdRow.style.display = 'none';
+        showToast('已清空所有内容', 'info');
+    });
+
+    document.getElementById('zjExampleBtn').addEventListener('click', function () {
+        zj.appId.value = '20250708083343A001';
+        zj.secretKey.value = 'ae759f91f1d44ac880502aee284603d2';
+        zj.timestamp.value = '';
+        zj.nonce.value = '';
+        zj.bodyJson.value = JSON.stringify({ callbackUrl: 'https://ordinary-unit.org/', type: 20 }, null, 2);
+        zj.requestId.value = 'a3b1bc5ee66748f19192e7b47d6a8cc4';
+        zj.serviceUrl.value = 'http://192.168.0.167:8989';
+        zj.method.value = 'POST'; zj.bodyRow.style.display = ''; zj.reqIdRow.style.display = 'none';
+        zj.bodyHash.value = ''; zj.stringA.value = ''; zj.signature.value = '';
+        zj.headers.value = ''; zj.curl.value = '';
+        showToast('已加载示例数据（POST），点击「生成签名」计算', 'info');
+    });
+
+    zj.copySig.addEventListener('click', function () {
+        var text = zj.signature.value;
+        if (!text) { showToast('没有可复制的内容', 'warning'); return; }
+        navigator.clipboard.writeText(text).then(function () {
+            var orig = zj.copySig.innerHTML;
+            zj.copySig.classList.add('copied');
+            zj.copySig.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+            showToast('signature 已复制到剪贴板', 'success');
+            setTimeout(function () { zj.copySig.classList.remove('copied'); zj.copySig.innerHTML = orig; }, 2000);
+        }).catch(function () { showToast('复制失败', 'error'); });
+    });
+
+    zj.copyHdrs.addEventListener('click', function () {
+        var text = zj.headers.value;
+        if (!text) { showToast('没有可复制的内容', 'warning'); return; }
+        navigator.clipboard.writeText(text).then(function () {
+            var orig = zj.copyHdrs.innerHTML;
+            zj.copyHdrs.classList.add('copied');
+            zj.copyHdrs.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+            showToast('请求头已复制到剪贴板', 'success');
+            setTimeout(function () { zj.copyHdrs.classList.remove('copied'); zj.copyHdrs.innerHTML = orig; }, 2000);
+        }).catch(function () { showToast('复制失败', 'error'); });
+    });
+
+})();
+</script>
+</body>
+</html>
