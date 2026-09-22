@@ -611,6 +611,30 @@
     .btn { justify-content: center; }
     .form-row-duo { flex-direction: column; gap: 0; }
   }
+.back-home {
+    position: fixed;
+    top: 14px; left: 14px;
+    z-index: 999;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    background: rgba(20, 25, 34, 0.85);
+    border: 1px solid rgba(35, 45, 62, 0.8);
+    border-radius: 8px;
+    color: #8a94a8;
+    font-size: 12px;
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: 0.2s ease;
+  }
+  .back-home:hover {
+    color: #e6edf5;
+    border-color: rgba(45, 58, 80, 0.8);
+    background: rgba(25, 31, 44, 0.9);
+  }
 </style>
 </head>
 <body>
@@ -633,6 +657,8 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<a class="back-home" href="index.html">← 首页</a>
 
 <!-- Header -->
 <header class="header">

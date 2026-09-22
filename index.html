@@ -775,7 +775,7 @@
         const toolId = card.dataset.id;
         const tool = tools.find(t => t.id === toolId);
         if (tool && tool.url) {
-          window.open(tool.url, '_blank');
+          window.location.href = tool.url;
         }
       });
     });

@@ -30,5 +30,13 @@
     "desc": "博思电子发票接口签名/验签，BASE64+MD5 签名算法，支持加密签名与解密验签",
     "icon": "🧾",
     "category": "convert"
+  },
+  {
+    "id": "t3",
+    "name": "HAR 接口检索器",
+    "url": "har-inspector.html",
+    "desc": "拖入浏览器导出的 .har 抓包文件，按关键字（接口路径/请求参数/响应内容）本地检索定位接口调用，内置示例数据可离线体验",
+    "icon": "🔍",
+    "category": "dev"
   }
 ]

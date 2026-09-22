@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="dvcGuu21qHGuVyMn8t0huG">
+<head data-page-node-id="K4TQjMvRy2iHqlNOjsPrU8">
+<meta charset="UTF-8" data-page-node-id="bxd01BtO4XujCc79W1kxDU">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="i8FiBICK1RF85Xv0sD1BF2">
+<title>HAR 接口检索器 · 本地解析</title>
+<style>
+  :root{
+    --bg:#f4f6fa;
+    --panel:#ffffff;
+    --panel-2:#fafbfd;
+    --border:#e3e8f0;
+    --border-strong:#d2d9e6;
+    --text:#1d2433;
+    --text-2:#5b6577;
+    --text-3:#8b95a8;
+    --accent:#2563eb;
+    --accent-soft:#eaf1ff;
+    --mark:#fff2a8;
+    --mark-border:#f2d95c;
+    --ok:#12855f;
+    --warn:#b45309;
+    --err:#c62828;
+    --radius:10px;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,'Courier New','Microsoft YaHei',monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','PingFang SC','Hiragino Sans GB',sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:var(--sans);background:var(--bg);color:var(--text);
+    font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;font-size:13px;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:13px;color:inherit}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:16px;padding:10px 18px;
+    background:var(--panel);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:30;
+  }
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .logo{
+    width:34px;height:34px;border-radius:9px;flex:none;
+    background:linear-gradient(135deg,#2563eb,#4f8bff);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:12px;letter-spacing:.5px;
+  }
+  .brand h1{margin:0;font-size:14.5px;font-weight:650;letter-spacing:.2px}
+  .brand p{margin:1px 0 0;font-size:11.5px;color:var(--text-3)}
+  .topbar-spacer{flex:1}
+  .file-meta{font-size:11.5px;color:var(--text-2);max-width:38vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .btn{
+    border:1px solid var(--border-strong);background:var(--panel);color:var(--text);
+    padding:6px 13px;border-radius:8px;transition:.14s;white-space:nowrap;
+  }
+  .btn:hover{background:var(--panel-2);border-color:#bfc9da}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#1d55d0}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--text-2)}
+  .btn.ghost:hover{background:var(--panel-2);color:var(--text)}
+  .btn.sm{padding:3px 9px;font-size:12px;border-radius:6px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---------- 空状态 ---------- */
+  .empty-wrap{display:flex;align-items:center;justify-content:center;height:calc(100vh - 56px);padding:24px}
+  .drop-card{
+    width:min(660px,100%);background:var(--panel);border:2px dashed var(--border-strong);
+    border-radius:16px;padding:44px 32px;text-align:center;transition:.18s;
+  }
+  .drop-card.hot{border-color:var(--accent);background:var(--accent-soft)}
+  .drop-card .ico{font-size:38px;line-height:1;margin-bottom:12px}
+  .drop-card h2{margin:0 0 6px;font-size:17px;font-weight:650}
+  .drop-card p{margin:0 0 20px;color:var(--text-2);font-size:12.5px}
+  .drop-card .tips{margin-top:22px;text-align:left;border-top:1px solid var(--border);padding-top:16px;color:var(--text-2);font-size:12px}
+  .drop-card .tips li{margin:5px 0}
+  .drop-card code{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11.5px}
+
+  /* ---------- 布局 ---------- */
+  .layout{display:none;grid-template-columns:352px 1fr;height:calc(100vh - 56px)}
+  .layout.on{display:grid}
+  .sidebar{
+    background:var(--panel);border-right:1px solid var(--border);
+    padding:14px;overflow-y:auto;
+  }
+  .content{overflow-y:auto;padding:14px 16px}
+
+  /* ---------- 侧栏控件 ---------- */
+  .field-label{font-size:11px;font-weight:650;color:var(--text-3);letter-spacing:.6px;text-transform:uppercase;margin:0 0 6px}
+  .search-row{display:flex;gap:8px;margin-bottom:4px}
+  .search-row input{
+    flex:1;min-width:0;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px;background:var(--panel-2);
+  }
+  .search-row input:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+  .search-row .btn{padding:8px 14px}
+  .opt-row{display:flex;gap:16px;margin:8px 0 14px}
+  .opt-row label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);cursor:pointer;user-select:none}
+  .opt-row input{accent-color:var(--accent);margin:0}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .chip{
+    border:1px solid var(--border-strong);background:var(--panel);color:var(--text-2);
+    padding:3px 10px;border-radius:999px;font-size:12px;transition:.14s;
+  }
+  .chip:hover{border-color:#b9c4d6}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .chips-actions{display:flex;gap:10px;margin:-6px 0 14px}
+  .link-btn{background:none;border:none;padding:0;color:var(--accent);font-size:12px}
+  .link-btn:hover{text-decoration:underline}
+  .filters{display:flex;gap:8px;margin-bottom:14px}
+  .filters select{
+    flex:1;min-width:0;padding:6px 8px;border:1px solid var(--border-strong);border-radius:8px;background:var(--panel-2);
+  }
+  .filters select:focus{outline:none;border-color:var(--accent)}
+  .stat-box{
+    border:1px solid var(--border);border-radius:var(--radius);background:var(--panel-2);
+    padding:10px 12px;margin-bottom:14px;
+  }
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .stat-item .n{font-size:17px;font-weight:660;font-variant-numeric:tabular-nums;line-height:1.2}
+  .stat-item .l{font-size:11px;color:var(--text-3)}
+  .divider{height:1px;background:var(--border);margin:14px 0}
+  .hint{font-size:11.5px;color:var(--text-3);line-height:1.6}
+  .kbd{
+    font-family:var(--mono);font-size:11px;border:1px solid var(--border-strong);
+    border-bottom-width:2px;border-radius:4px;padding:0 4px;background:#fff;
+  }
+
+  /* ---------- 结果区 ---------- */
+  .tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border)}
+  .tab{
+    border:none;background:none;padding:7px 12px;color:var(--text-2);font-size:13px;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .tab:hover{color:var(--text)}
+  .tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .tab .cnt{
+    display:inline-block;margin-left:6px;background:var(--border);border-radius:999px;
+    padding:0 6px;font-size:11px;color:var(--text-2);
+  }
+  .tab.on .cnt{background:var(--accent-soft);color:var(--accent)}
+
+  .group-card{
+    border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);
+    margin-bottom:10px;overflow:hidden;
+  }
+  .group-head{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;user-select:none;
+  }
+  .group-head:hover{background:var(--panel-2)}
+  .group-head .caret{color:var(--text-3);font-size:10px;width:10px;flex:none;transition:transform .15s}
+  .group-card.open .caret{transform:rotate(90deg)}
+  .group-path{
+    font-family:var(--mono);font-size:12.5px;font-weight:600;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;
+  }
+  .group-host{font-size:11px;color:var(--text-3);font-family:var(--mono)}
+  .group-meta{display:flex;gap:8px;align-items:center;flex:none}
+  .hit-badge{
+    background:var(--accent-soft);color:var(--accent);border-radius:999px;
+    font-size:11px;padding:1px 8px;font-weight:600;font-variant-numeric:tabular-nums;
+  }
+  .group-body{display:none;border-top:1px solid var(--border);background:var(--panel-2)}
+  .group-card.open .group-body{display:block}
+  .hit-row{
+    display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);
+    font-size:12px;align-items:flex-start;
+  }
+  .hit-row:last-child{border-bottom:none}
+  .hit-row:hover{background:#fff}
+  .hit-loc{flex:none;width:196px;display:flex;flex-direction:column;gap:3px}
+  .scope-tag{
+    display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:4px;
+    background:#eceff5;color:var(--text-2);border:1px solid var(--border-strong);
+    align-self:flex-start;white-space:nowrap;
+  }
+  .hit-path{
+    font-family:var(--mono);font-size:11px;color:var(--text-3);word-break:break-all;
+  }
+  .hit-snippet{
+    font-family:var(--mono);font-size:11.5px;color:var(--text);flex:1;min-width:0;
+    word-break:break-all;white-space:pre-wrap;line-height:1.65;
+  }
+  .hit-actions{flex:none;opacity:0;transition:.15s}
+  .hit-row:hover .hit-actions{opacity:1}
+  mark{background:var(--mark);border-bottom:1px solid var(--mark-border);border-radius:2px;padding:0 1px;color:inherit}
+  .more-row{padding:7px 12px;font-size:12px;color:var(--accent);cursor:pointer;background:#fff}
+  .more-row:hover{text-decoration:underline}
+
+  /* ---------- 表格 ---------- */
+  .tbl-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--panel)}
+  table{width:100%;border-collapse:collapse}
+  thead th{
+    position:sticky;top:0;background:var(--panel-2);text-align:left;font-size:11px;
+    font-weight:650;color:var(--text-3);letter-spacing:.4px;text-transform:uppercase;
+    padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;
+  }
+  tbody td{padding:7px 10px;border-bottom:1px solid #eef1f6;font-size:12.5px;vertical-align:top}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--panel-2)}
+  tbody tr:last-child td{border-bottom:none}
+  .td-url{font-family:var(--mono);font-size:11.5px;word-break:break-all;color:var(--text)}
+  .num{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--text-2)}
+  .m{
+    display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;
+    padding:1px 6px;border-radius:4px;letter-spacing:.3px;white-space:nowrap;
+  }
+  .m-GET{background:#e7f0ff;color:#1d4ed8}
+  .m-POST{background:#e3f6ec;color:#0f7a4a}
+  .m-PUT{background:#fff3dd;color:#a15c07}
+  .m-PATCH{background:#f2ebff;color:#6d28d9}
+  .m-DELETE{background:#fdeaea;color:#c62828}
+  .m-OPTIONS,.m-HEAD{background:#eceff5;color:#4b5563}
+  .m-OTHER{background:#eceff5;color:#4b5563}
+  .s-ok{color:var(--ok);font-weight:600}
+  .s-redir{color:var(--warn);font-weight:600}
+  .s-err{color:var(--err);font-weight:600}
+  .muted{color:var(--text-3)}
+
+  /* ---------- 进度条 ---------- */
+  .progress{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:10px 0}
+  .progress > i{display:block;height:100%;background:var(--accent);width:0;transition:width .12s}
+
+  /* ---------- 抽屉 ---------- */
+  .mask{
+    position:fixed;inset:0;background:rgba(24,32,48,.34);opacity:0;pointer-events:none;
+    transition:.18s;z-index:40;
+  }
+  .mask.on{opacity:1;pointer-events:auto}
+  .drawer{
+    position:fixed;top:0;right:0;height:100%;width:min(920px,86vw);background:var(--panel);
+    box-shadow:-12px 0 34px rgba(20,30,50,.16);transform:translateX(100%);
+    transition:transform .2s ease;z-index:50;display:flex;flex-direction:column;
+  }
+  .drawer.on{transform:translateX(0)}
+  .drawer-head{
+    display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);
+  }
+  .drawer-head .path{font-family:var(--mono);font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .drawer-head .x{border:none;background:none;font-size:20px;line-height:1;color:var(--text-3);padding:0 4px}
+  .drawer-head .x:hover{color:var(--text)}
+  .drawer-tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--border);overflow-x:auto}
+  .drawer-body{flex:1;overflow:auto;padding:14px 16px}
+  .sub{
+    font-size:11px;font-weight:650;color:var(--text-3);letter-spacing:.6px;text-transform:uppercase;
+    margin:16px 0 6px;
+  }
+  .sub:first-child{margin-top:0}
+  pre.code{
+    margin:0;font-family:var(--mono);font-size:11.8px;line-height:1.62;white-space:pre-wrap;
+    word-break:break-all;background:var(--panel-2);border:1px solid var(--border);
+    border-radius:8px;padding:10px 12px;max-height:52vh;overflow:auto;
+  }
+  .kv{display:grid;grid-template-columns:180px 1fr;gap:5px 12px;font-size:12.5px}
+  .kv .k{color:var(--text-3)}
+  .kv .v{font-family:var(--mono);font-size:11.8px;word-break:break-all}
+  .uline{border-bottom:1px solid var(--border);padding-bottom:3px}
+  .toolbar-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .url-box{
+    font-family:var(--mono);font-size:12px;word-break:break-all;background:var(--panel-2);
+    border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px;
+  }
+
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);
+    background:#1d2433;color:#fff;font-size:12.5px;padding:8px 16px;border-radius:8px;
+    opacity:0;pointer-events:none;transition:.2s;z-index:80;
+  }
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  .drag-overlay{
+    position:fixed;inset:0;background:rgba(37,99,235,.1);border:3px dashed var(--accent);
+    z-index:70;display:none;align-items:center;justify-content:center;
+    font-size:16px;font-weight:600;color:var(--accent);
+  }
+  .drag-overlay.on{display:flex}
+
+  .err-box{
+    border:1px solid #f3c8c8;background:#fdf4f4;color:#8f2222;border-radius:8px;
+    padding:10px 12px;font-size:12.5px;margin-bottom:10px;
+  }
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cdd5e2;border-radius:6px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#b6c0d1;background-clip:content-box}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body data-page-node-id="HiabzNgVrTbZD9l20q0xDw">
+
+<header class="topbar" data-page-node-id="bNU6Ap1FLurRBvt6C3VlSh">
+  <div class="brand" data-page-node-id="uNSzFMPewWT5OhxX72mszE">
+    <div class="logo" data-page-node-id="sQ5pDULgXM7KJfB6SQkJbF">HAR</div>
+    <div data-page-node-id="EO49qSBreKEIq4MRthYh1o">
+      <h1 data-page-node-id="AfaizYLORCUV7dBC0D92SC">HAR 接口检索器</h1>
+      <p data-page-node-id="tiQsE3DOaK19YZ40EQ5RJ8">本地解析 · 文件不上传 · 不请求任何第三方接口</p>
+    </div>
+  </div>
+  <div class="topbar-spacer" data-page-node-id="gynWyw8KNaPBspDCJxQwKa"></div>
+  <span class="file-meta" id="fileMeta" data-page-node-id="2wT5QAKCq0RAOo5uIZJFV1"></span>
+  <button class="btn ghost" id="btnSample" data-page-node-id="vJ8CRWhn9yyts4rE2rg1uG">载入示例</button>
+  <button class="btn" id="btnClear" hidden data-page-node-id="UJHCmYzeCDWWo18Ktt2Q1Y">清空</button>
+  <button class="btn primary" id="btnOpen" data-page-node-id="5We9VdG2EdTCiIEtIDyRyw">选择 .har 文件</button>
+  <input type="file" id="fileInput" accept=".har,.json,application/json" hidden data-page-node-id="ltrqeISHjDyDUQd5v6rGve">
+</header>
+
+<!-- 空状态 -->
+<div class="empty-wrap" id="emptyState" data-page-node-id="gj9dxHFxnwfFvsPDXKdTC1">
+  <div class="drop-card" id="dropCard" data-page-node-id="UaSKQC8X5ahp0AiF3Vxcsp">
+    <div class="ico" data-page-node-id="3JtD1fyweODlFFC6VBjJCz">&#128269;</div>
+    <h2 data-page-node-id="OgV3IRLl5Y03oO49g7HmFB">拖入浏览器导出的 .har 文件</h2>
+    <p data-page-node-id="Dueycr83dBBfv7QQsR1XGB">自动解析全部接口请求，输入关键字即可定位它出现在哪个接口、哪个字段</p>
+    <button class="btn primary" id="btnOpen2" data-page-node-id="kzGFMF4950G6nHBzAu36ld">选择文件</button>
+    <div class="tips" data-page-node-id="PM2U0GsKmXRKylCE6z3kIj">
+      <ul style="margin:0;padding-left:18px" data-page-node-id="2ctk54u71IMdDuct7CBAc1">
+        <li data-page-node-id="1Rkxf8w57WkNSNi12B7UEl">Chrome / Edge：开发者工具 &rarr; <code data-page-node-id="PcJSUbHlE01IY6V5FetIoa">Network</code> &rarr; 刷新页面 &rarr; 右键请求列表 &rarr; <code data-page-node-id="4yaPPfiHbQqO2PpjIgLjze">Save all as HAR with content</code></li>
+        <li data-page-node-id="p2lzQ4fMmSCffRddPEYOIr">Firefox：<code data-page-node-id="nZeQTVSjyiYohiVlM93zSM">网络</code> &rarr; 右键 &rarr; <code data-page-node-id="DBx7uLCkmJZoRHPo3vUFVf">全部另存为 HAR</code></li>
+        <li data-page-node-id="ee999sqXx521rBZl0DFl4I">检索范围覆盖：URL / Query 参数 / 请求头 / 请求体 / 响应头 / 响应体 / Cookie</li>
+        <li data-page-node-id="baAmXH2b08DKWOqKAaHI2t">响应体为 JSON 时会给出字段路径（如 <code data-page-node-id="bcbvV0Xx3AgweUxF6oYBWC">$.data.list[2].name</code>），非 JSON 文本给出行号</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 主界面 -->
+<div class="layout" id="layout" data-page-node-id="GNyyBpFK7Vc6euDv2UpgqG">
+  <aside class="sidebar" data-page-node-id="SHfB8YgAiNhuf0mIKXesCQ">
+    <p class="field-label" data-page-node-id="8MU8jiYOYq8oYjIm4XE8go">关键字</p>
+    <div class="search-row" data-page-node-id="85lTJ2KW3ajArCTTawiHxc">
+      <input id="q" type="text" placeholder="如 orderId / 张三 / 13800138000" autocomplete="off" spellcheck="false" data-page-node-id="59hWfnAGeENmnH7vDCXkz2">
+      <button class="btn primary" id="btnSearch" data-page-node-id="Y7pXEAryI08YwUG29tjnS5">检索</button>
+    </div>
+    <div class="opt-row" data-page-node-id="9EbFVlLvgwIlQHL1IVcUIr">
+      <label data-page-node-id="UJDi6Yge2zQ7K2ZID4Rv1O"><input type="checkbox" id="optCase" data-page-node-id="GTV5gVrNOmYsWHZVyokoHx"> 区分大小写</label>
+      <label data-page-node-id="U95yXLkqZaIlhFoS5kvExJ"><input type="checkbox" id="optRegex" data-page-node-id="RIbVtGCOv9Q37K466ySKqk"> 正则</label>
+    </div>
+
+    <p class="field-label" data-page-node-id="83cJl0iGGMGk6mjVjqUUjr">检索范围</p>
+    <div class="chips" id="scopes" data-page-node-id="q4YEQhQLHKOjovt4d12slY">
+      <button class="chip on" data-scope="url" data-page-node-id="iiuL5V1giBj2b54CW0Pjc9">URL / Query</button>
+      <button class="chip on" data-scope="reqHeader" data-page-node-id="CfXzxA1w8Y5zh09GsWefwB">请求头</button>
+      <button class="chip on" data-scope="reqBody" data-page-node-id="dGZFTbEXkVeUODbkHDZKPt">请求体</button>
+      <button class="chip on" data-scope="resHeader" data-page-node-id="gCUixAtzH3l8Gl8XVnfLRp">响应头</button>
+      <button class="chip on" data-scope="resBody" data-page-node-id="jpEXyAqrZ7NWmeWL8qCMxf">响应体</button>
+      <button class="chip on" data-scope="cookie" data-page-node-id="e2FmtpLoBfwjCyNhF5e9nn">Cookie</button>
+    </div>
+    <div class="chips-actions" data-page-node-id="Qwf4cECmYC7o4j7oIm4MKL">
+      <button class="link-btn" id="scopeAll" data-page-node-id="kytPurHQ5rxCleKzZ2hlNi">全选</button>
+      <button class="link-btn" id="scopeNone" data-page-node-id="iiF0tT0vEneDDmwo0u6bEQ">全不选</button>
+      <button class="link-btn" id="scopeReset" data-page-node-id="ta3neU4XRuge1NzfIewjiV">恢复默认</button>
+    </div>
+
+    <p class="field-label" data-page-node-id="3C9v8MaeuCbfgkDdytQUUP">接口过滤</p>
+    <div class="filters" data-page-node-id="r5NIceB2dDkTKHBH8WNx24">
+      <select id="fMethod" data-page-node-id="WveBbNcV3L5ZO4MhELaXka"><option value="" data-page-node-id="K7YtBduY0QHhQA18aJdD3J">全部方法</option></select>
+      <select id="fType" data-page-node-id="1sJXRP5qdvUs0G8j34wsdS"><option value="" data-page-node-id="M0tXTcJyImLnxPkdOueDof">全部类型</option></select>
+    </div>
+
+    <div class="stat-box" id="statBox" data-page-node-id="i2ai5d2KWHveJmk2NUHeBc">
+      <div class="stat-grid" data-page-node-id="ZsJbuwanIjYcReZJTUSRa4">
+        <div class="stat-item" data-page-node-id="tVXwVuiPlPKjp083y2X86G"><div class="n" id="stReq" data-page-node-id="dd6Bsw6DHn19uvMLJvzN6k">-</div><div class="l" data-page-node-id="MhnvUzTCHxef8tJ54NQr1h">请求总数</div></div>
+        <div class="stat-item" data-page-node-id="gW3OseoWvNQrG17AJ6gX1C"><div class="n" id="stApi" data-page-node-id="gEz7bbJNe3pWAyA64B3OuD">-</div><div class="l" data-page-node-id="ztHlCn1BFvrKEwuSBc5gw0">接口数（去重）</div></div>
+        <div class="stat-item" data-page-node-id="iQIGvFoAWrrt8nNdpEM6sf"><div class="n" id="stHitApi" data-page-node-id="s5BmpaRYoB22Yc0vHROkBJ">-</div><div class="l" data-page-node-id="9L1mah9VEsFCBx9VAAFfMu">命中接口</div></div>
+        <div class="stat-item" data-page-node-id="rZjjQ8CtQkepTaJsyxg6BU"><div class="n" id="stHit" data-page-node-id="i7Z1IzXGLvqy6kstNJ0GpH">-</div><div class="l" data-page-node-id="ZgwVE2BbaHUaTDKi0fC4vl">命中位置</div></div>
+      </div>
+      <div class="progress" id="progWrap" hidden data-page-node-id="v9A5nZW4yXDXz5iQRrbuc7"><i id="prog" data-page-node-id="98CqVIZLST4qgPPfkstGr8"></i></div>
+    </div>
+
+    <div class="toolbar-row" data-page-node-id="9bmuc22pewkvJEjviOAfnM">
+      <button class="btn sm" id="btnExportJson" disabled data-page-node-id="iGis2vDlCMR6mjgioCSC7F">导出命中 JSON</button>
+      <button class="btn sm" id="btnExportCsv" disabled data-page-node-id="6IPGhz9YAfDd7RJ3lwbSxA">导出 CSV</button>
+    </div>
+    <div class="divider" data-page-node-id="tJtu2qUx6kfG7LvOv05rJn"></div>
+    <p class="hint" data-page-node-id="tORrkFTkBfesFat6et17Az">
+      提示：输入框内按 <span class="kbd" data-page-node-id="jsFqY7Hq7HbBSWYkxSNEDY">Enter</span> 立即检索，输入停顿 300ms 自动检索。<br data-page-node-id="BgcPGE1NVmAtU4SbP095IM">
+      点击命中项可打开右侧详情，并自动高亮定位。
+    </p>
+  </aside>
+
+  <section class="content" data-page-node-id="7wnGJMPiSnDjIkJuzWSV2y">
+    <div class="tabs" data-page-node-id="pXpsfBd2zE28Tvuc7uu4x2">
+      <button class="tab on" data-tab="matches" data-page-node-id="pwUKfjqhIaFyTn0P6Cj2FL">匹配结果 <span class="cnt" id="tabCntHit" data-page-node-id="12KW9fHJnvHy99HBNLKlDb">0</span></button>
+      <button class="tab" data-tab="all" data-page-node-id="29DPoK6rXqOwrhsO6xtlYS">全部接口 <span class="cnt" id="tabCntAll" data-page-node-id="cLHCM3Dyl6PMrgvbKDjByw">0</span></button>
+    </div>
+    <div id="results" data-page-node-id="fOWsRjS3wpx7k9aAsDwSRR"></div>
+  </section>
+</div>
+
+<div class="mask" id="mask" data-page-node-id="uNBFCgQPtVaHepBQQRibAB"></div>
+<div class="drawer" id="drawer" data-page-node-id="EQaLLnyh5MkrbjBJYSLTSW">
+  <div class="drawer-head" data-page-node-id="TEexKhLK4jgp6kStMcFBCO">
+    <span id="dMethod" class="m m-GET" data-page-node-id="aAtTgU0uN1HUTARnMXPo8R">GET</span>
+    <span class="path" id="dPath" data-page-node-id="bShDdwqKTsXHtwTOrDksLv"></span>
+    <button class="btn sm" id="dCurl" data-page-node-id="IHOGGIF7imDo86QmMG2nsO">复制 cURL</button>
+    <button class="x" id="dClose" title="关闭" data-page-node-id="SNPqlXSYMCKSOe3FcoePR7">&times;</button>
+  </div>
+  <div class="drawer-tabs" id="dTabs" data-page-node-id="xrNgJUP5CsxWUl4VBsVskn"></div>
+  <div class="drawer-body" id="dBody" data-page-node-id="4kY5SxwvjXr0HL8ZQR7yut"></div>
+</div>
+
+<div class="drag-overlay" id="dragOverlay" data-page-node-id="GXjNS1SbBIAwBboOvObkap">松开鼠标载入 .har 文件</div>
+<div class="toast" id="toast" data-page-node-id="ScdQ697JvLiMfIe7rSp7gB"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+   * 全局状态
+   * ============================================================ */
+  var state = {
+    fileName: '',
+    entries: [],          // 归一化后的条目
+    raw: null,            // 原始 HAR
+    decodedCache: new Map(),
+    groups: [],           // 命中分组
+    matchMap: new Map(),  // groupKey -> 命中数组
+    hitCount: 0,
+    query: '',
+    regex: null,
+    scopes: null,
+    searchToken: 0,
+    tab: 'matches',
+    detail: { meta: null, tab: 'overview', focusHit: -1 }
+  };
+
+  var DEFAULT_SCOPES = ['url', 'reqHeader', 'reqBody', 'resHeader', 'resBody', 'cookie'];
+  var HIT_LIMIT_PER_ENTRY = 300;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ============================================================
+   * 工具函数
+   * ============================================================ */
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function buildRegex(q, caseSensitive, isRegex) {
+    if (!q) return null;
+    try {
+      var src = isRegex ? q : escapeRegExp(q);
+      return new RegExp(src, caseSensitive ? 'g' : 'gi');
+    } catch (e) { return null; }
+  }
+
+  function highlight(text, re) {
+    if (!re || !text) return esc(text);
+    re.lastIndex = 0;
+    var out = '', last = 0, m, guard = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (guard++ > 800) break;
+      if (m.index > last) out += esc(text.slice(last, m.index));
+      out += '<mark>' + esc(m[0]) + '</mark>';
+      last = m.index + m[0].length;
+      if (m[0].length === 0) re.lastIndex++;
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  function windowAround(text, idx, len) {
+    if (text == null) return '';
+    text = String(text);
+    if (idx < 0) { idx = 0; len = 1; }
+    if (!len) len = 1;
+    var pad = 110;
+    var s = Math.max(0, idx - pad);
+    var e = Math.min(text.length, idx + len + pad);
+    return (s > 0 ? '…' : '') + text.slice(s, e).replace(/\s+/g, ' ') + (e < text.length ? '…' : '');
+  }
+
+  function lineOf(text, idx) {
+    var n = 1;
+    for (var i = 0; i < idx && i < text.length; i++) if (text.charCodeAt(i) === 10) n++;
+    return n;
+  }
+
+  function fmtSize(n) {
+    if (n == null || isNaN(n)) return '-';
+    if (n < 0) return '-';
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1048576).toFixed(2) + ' MB';
+  }
+
+  function fmtTime(ms) {
+    if (ms == null || isNaN(ms)) return '-';
+    if (ms < 1000) return Math.round(ms) + ' ms';
+    return (ms / 1000).toFixed(2) + ' s';
+  }
+
+  function fmtDateTime(s) {
+    if (!s) return '-';
+    var d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    var p = function (x) { return String(x).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' +
+      p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+  }
+
+  function isTextMime(mime) {
+    if (!mime) return true;
+    mime = mime.toLowerCase().split(';')[0].trim();
+    if (!mime) return true;
+    if (mime.indexOf('text/') === 0) return true;
+    if (/(json|xml|javascript|ecmascript|x-www-form-urlencoded|graphql|html|css|yaml|csv|plain)/.test(mime)) return true;
+    if (/^(image|audio|video|font)\//.test(mime)) return false;
+    if (/(octet-stream|pdf|zip|gzip|protobuf|x-msgpack|wasm)/.test(mime)) return false;
+    return true;
+  }
+
+  function mimeShort(mime) {
+    if (!mime) return '-';
+    var m = mime.toLowerCase().split(';')[0].trim();
+    if (m.indexOf('application/json') === 0) return 'json';
+    if (m.indexOf('application/x-www-form-urlencoded') === 0) return 'form';
+    if (m.indexOf('application/javascript') === 0 || m.indexOf('text/javascript') === 0) return 'js';
+    if (m.indexOf('text/html') === 0) return 'html';
+    if (m.indexOf('text/css') === 0) return 'css';
+    if (m.indexOf('text/xml') === 0 || m.indexOf('application/xml') === 0) return 'xml';
+    if (m.indexOf('text/plain') === 0) return 'text';
+    if (m.indexOf('/') === 0) return m;
+    return m.indexOf('/') > 0 ? m.slice(0, m.indexOf('/')) : m;
+  }
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(t._tm);
+    t._tm = setTimeout(function () { t.classList.remove('on'); }, 1600);
+  }
+
+  function copyText(text, okMsg) {
+    var done = function () { toast(okMsg || '已复制'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+    } else { fallbackCopy(text, done); }
+  }
+  function fallbackCopy(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { toast('复制失败，请手动选择'); }
+    document.body.removeChild(ta);
+  }
+
+  function nextFrame() {
+    return new Promise(function (r) { setTimeout(r, 0); });
+  }
+
+  /* ============================================================
+   * 载入 & 归一化
+   * ============================================================ */
+  function loadHarText(text, fileName) {
+    var har;
+    try { har = JSON.parse(text); }
+    catch (e) { alert('解析失败：不是合法的 JSON / HAR 文件。\n' + e.message); return; }
+
+    var log = har && har.log;
+    if (!log || !Array.isArray(log.entries)) {
+      alert('解析失败：未找到 log.entries 结构，请确认这是浏览器导出的 HAR 文件。');
+      return;
+    }
+    if (!log.entries.length) {
+      alert('该 HAR 中没有记录到任何请求（可能导出时未勾选 with content，或页面无网络请求）。');
+      return;
+    }
+
+    state.raw = har;
+    state.fileName = fileName || 'har';
+    state.decodedCache = new Map();
+    state.entries = log.entries.map(normalizeEntry);
+    state.groups = [];
+    state.matchMap = new Map();
+    state.hitCount = 0;
+    state.query = '';
+    state.regex = null;
+
+    $('q').value = '';
+    buildFilters();
+    updateStats();
+    showLayout();
+
+    var ver = (log.version || '1.2');
+    var browser = (log.creator && log.creator.name) ? (log.creator.name + ' ' + (log.creator.version || '')) : '';
+    $('fileMeta').textContent = state.fileName + ' · ' + state.entries.length + ' 条请求 · HAR ' + ver +
+      (browser ? ' · ' + browser.trim() : '');
+
+    render();
+    $('q').focus();
+  }
+
+  function normalizeEntry(e, index) {
+    var req = e.request || {};
+    var res = e.response || {};
+    var u = null;
+    try { u = new URL(req.url || ''); } catch (err) { u = null; }
+    var method = String(req.method || 'GET').toUpperCase();
+    var query = [];
+    if (u) { try { query = Array.from(u.searchParams.entries()); } catch (err) { query = []; } }
+    var content = res.content || {};
+    var size = (typeof content.size === 'number') ? content.size
+      : (typeof res.bodySize === 'number' ? res.bodySize : null);
+    var key = method + ' ' + (u ? (u.origin + u.pathname) : (req.url || ''));
+    return {
+      index: index,
+      entry: e,
+      method: method,
+      url: req.url || '',
+      origin: u ? u.origin : '',
+      pathname: u ? u.pathname : (req.url || ''),
+      query: query,
+      status: res.status || 0,
+      statusText: res.statusText || '',
+      mime: content.mimeType || '',
+      mimeShort: mimeShort(content.mimeType),
+      size: size,
+      time: (typeof e.time === 'number' ? e.time : null),
+      started: e.startedDateTime || '',
+      groupKey: key
+    };
+  }
+
+  function getResText(meta) {
+    if (state.decodedCache.has(meta.index)) return state.decodedCache.get(meta.index);
+    var content = (meta.entry.response || {}).content || {};
+    var out = null;
+    var raw = content.text;
+    if (typeof raw === 'string' && raw.length) {
+      if (content.encoding === 'base64') {
+        if (isTextMime(content.mimeType)) {
+          try {
+            var bin = atob(raw);
+            var bytes = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            out = new TextDecoder('utf-8').decode(bytes);
+          } catch (err) { out = null; }
+        } else { out = null; }
+      } else {
+        out = raw;
+      }
+    }
+    state.decodedCache.set(meta.index, out);
+    return out;
+  }
+
+  function buildFilters() {
+    var methods = {}, types = {};
+    state.entries.forEach(function (m) {
+      methods[m.method] = (methods[m.method] || 0) + 1;
+      var t = m.mimeShort || '-';
+      types[t] = (types[t] || 0) + 1;
+    });
+    var ms = $('fMethod');
+    ms.innerHTML = '<option value="">全部方法</option>' + Object.keys(methods).sort().map(function (k) {
+      return '<option value="' + esc(k) + '">' + esc(k) + '（' + methods[k] + '）</option>';
+    }).join('');
+    var ts = $('fType');
+    ts.innerHTML = '<option value="">全部类型</option>' + Object.keys(types).sort().map(function (k) {
+      return '<option value="' + esc(k) + '">' + esc(k) + '（' + types[k] + '）</option>';
+    }).join('');
+    ms.value = ''; ts.value = '';
+  }
+
+  function updateStats() {
+    var uniq = new Set();
+    state.entries.forEach(function (m) { uniq.add(m.groupKey); });
+    $('stReq').textContent = state.entries.length;
+    $('stApi').textContent = uniq.size;
+    $('stHitApi').textContent = state.groups.length || 0;
+    $('stHit').textContent = state.hitCount || 0;
+    $('tabCntAll').textContent = state.entries.length;
+    $('tabCntHit').textContent = state.groups.length || 0;
+    var has = state.groups.length > 0;
+    $('btnExportJson').disabled = !has;
+    $('btnExportCsv').disabled = !has;
+  }
+
+  function showLayout() {
+    $('emptyState').style.display = 'none';
+    $('layout').classList.add('on');
+    $('btnClear').hidden = false;
+  }
+  function resetToEmpty() {
+    state.entries = []; state.groups = []; state.matchMap = new Map(); state.hitCount = 0;
+    state.raw = null; state.decodedCache = new Map();
+    $('layout').classList.remove('on');
+    $('emptyState').style.display = '';
+    $('btnClear').hidden = true;
+    $('fileMeta').textContent = '';
+    $('fileInput').value = '';
+    closeDrawer();
+  }
+
+  /* ============================================================
+   * 检索核心
+   * ============================================================ */
+  function collectJsonHits(text, re, scope, out, limit) {
+    var data;
+    try { data = JSON.parse(text); }
+    catch (e) { return false; }
+
+    var startLen = out.length;
+    var testVal = function (val, path) {
+      if (out.length - startLen >= limit) return;
+      re.lastIndex = 0;
+      var m = re.exec(val);
+      if (m) {
+        out.push({
+          scope: scope, location: '字段值', path: path,
+          snippet: windowAround(val, m.index, m[0].length)
+        });
+      }
+    };
+    var walk = function (node, path) {
+      if (out.length - startLen >= limit) return;
+      if (node === null || node === undefined) return;
+      var t = typeof node;
+      if (t === 'string' || t === 'number' || t === 'boolean') { testVal(String(node), path); return; }
+      if (Array.isArray(node)) {
+        for (var i = 0; i < node.length; i++) walk(node[i], path + '[' + i + ']');
+        return;
+      }
+      if (t === 'object') {
+        var keys = Object.keys(node);
+        for (var k = 0; k < keys.length; k++) {
+          var key = keys[k];
+          if (out.length - startLen < limit) {
+            re.lastIndex = 0;
+            if (re.test(key)) {
+              out.push({ scope: scope, location: '字段名', path: path + '.' + key, snippet: key });
+            }
+          }
+          walk(node[key], path + '.' + key);
+        }
+      }
+    };
+    walk(data, '$');
+    return true;
+  }
+
+  function addTextHits(out, re, scope, location, path, text, limit, withLine) {
+    if (text == null || text === '') return;
+    text = String(text);
+    re.lastIndex = 0;
+    var m, count = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (out.length >= HIT_LIMIT_PER_ENTRY || count >= limit) break;
+      var loc = location;
+      var p = path;
+      if (withLine) {
+        var ln = lineOf(text, m.index);
+        p = (path ? path + ' ' : '') + '第 ' + ln + ' 行';
+      }
+      out.push({
+        scope: scope, location: loc, path: p,
+        snippet: windowAround(text, m.index, m[0].length)
+      });
+      count++;
+      if (m[0].length === 0) re.lastIndex++;
+    }
+  }
+
+  function searchEntry(meta, re, scopes) {
+    var hits = [];
+    var req = meta.entry.request || {};
+    var res = meta.entry.response || {};
+
+    // ---- URL / Query ----
+    if (scopes.has('url')) {
+      addTextHits(hits, re, 'URL', '请求 URL', '', meta.url, 10, false);
+      for (var qi = 0; qi < meta.query.length; qi++) {
+        var kv = meta.query[qi];
+        re.lastIndex = 0;
+        var hitK = re.test(kv[0]);
+        re.lastIndex = 0;
+        var hitV = re.test(kv[1]);
+        if (hitK || hitV) {
+          hits.push({
+            scope: 'URL', location: 'Query 参数',
+            path: kv[0] + (hitK ? '（参数名）' : '（参数值）'),
+            snippet: kv[0] + '=' + kv[1]
+          });
+        }
+      }
+    }
+
+    // ---- 请求头 ----
+    if (scopes.has('reqHeader') && Array.isArray(req.headers)) {
+      for (var i = 0; i < req.headers.length; i++) {
+        var h = req.headers[i] || {};
+        addTextHits(hits, re, '请求头', String(h.name || '') + ' 请求头', '', String(h.name || '') + ': ' + String(h.value == null ? '' : h.value), 6, false);
+      }
+    }
+
+    // ---- Cookie ----
+    if (scopes.has('cookie')) {
+      var rc = req.cookies || [];
+      for (var ci = 0; ci < rc.length; ci++) {
+        addTextHits(hits, re, 'Cookie', '请求 Cookie', String(rc[ci].name || ''), String(rc[ci].name || '') + '=' + String(rc[ci].value == null ? '' : rc[ci].value), 4, false);
+      }
+      var sc = res.cookies || [];
+      for (var si = 0; si < sc.length; si++) {
+        addTextHits(hits, re, 'Cookie', '响应 Set-Cookie', String(sc[si].name || ''), String(sc[si].name || '') + '=' + String(sc[si].value == null ? '' : sc[si].value), 4, false);
+      }
+    }
+
+    // ---- 请求体 ----
+    if (scopes.has('reqBody')) {
+      var pd = req.postData;
+      if (pd) {
+        var pdText = (typeof pd.text === 'string') ? pd.text : '';
+        var okJson = false;
+        if (pdText) okJson = collectJsonHits(pdText, re, '请求体', hits, 120);
+        if (!okJson && pdText) addTextHits(hits, re, '请求体', '请求体原文', '', pdText, 40, true);
+        if (Array.isArray(pd.params)) {
+          for (var pi = 0; pi < pd.params.length; pi++) {
+            var pp = pd.params[pi] || {};
+            re.lastIndex = 0;
+            var hk = re.test(String(pp.name || ''));
+            re.lastIndex = 0;
+            var hv = re.test(String(pp.value == null ? '' : pp.value));
+            if (hk || hv) {
+              hits.push({
+                scope: '请求体', location: '表单参数',
+                path: String(pp.name || '') + (hk ? '（参数名）' : '（参数值）'),
+                snippet: String(pp.name || '') + '=' + String(pp.value == null ? '' : pp.value)
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // ---- 响应头 ----
+    if (scopes.has('resHeader') && Array.isArray(res.headers)) {
+      for (var ri = 0; ri < res.headers.length; ri++) {
+        var rh = res.headers[ri] || {};
+        addTextHits(hits, re, '响应头', String(rh.name || '') + ' 响应头', '', String(rh.name || '') + ': ' + String(rh.value == null ? '' : rh.value), 6, false);
+      }
+    }
+
+    // ---- 响应体 ----
+    if (scopes.has('resBody')) {
+      var body = getResText(meta);
+      if (body) {
+        var ok = collectJsonHits(body, re, '响应体', hits, 120);
+        if (!ok) addTextHits(hits, re, '响应体', '响应体原文', '', body, 40, true);
+      }
+    }
+
+    return hits;
+  }
+
+  function currentScopes() {
+    var on = [];
+    var chips = document.querySelectorAll('#scopes .chip.on');
+    for (var i = 0; i < chips.length; i++) on.push(chips[i].dataset.scope);
+    return new Set(on);
+  }
+
+  function entryPassFilter(meta) {
+    var fm = $('fMethod').value;
+    var ft = $('fType').value;
+    if (fm && meta.method !== fm) return false;
+    if (ft && meta.mimeShort !== ft) return false;
+    return true;
+  }
+
+  function runSearch(immediate, switchTab) {
+    var q = $('q').value;
+    state.query = q;
+    var caseSensitive = $('optCase').checked;
+    var isRegex = $('optRegex').checked;
+    var scopes = currentScopes();
+
+    if (!q.trim()) {
+      state.groups = []; state.matchMap = new Map(); state.hitCount = 0;
+      state.regex = null;
+      setTab('all');
+      render();
+      return;
+    }
+    var re = buildRegex(q, caseSensitive, isRegex);
+    if (!re) { alert('正则表达式无效，请检查语法。'); return; }
+    state.regex = re;
+    state.scopes = scopes;
+
+    var token = ++state.searchToken;
+    $('progWrap').hidden = false;
+    $('prog').style.width = '0%';
+    $('btnSearch').disabled = true;
+
+    var map = new Map();
+    var total = 0;
+    var batch = 250;
+    var i = 0;
+
+    (function step() {
+      if (token !== state.searchToken) { $('btnSearch').disabled = false; return; }
+      var end = Math.min(i + batch, state.entries.length);
+      for (; i < end; i++) {
+        var meta = state.entries[i];
+        if (!entryPassFilter(meta)) continue;
+        var hits = searchEntry(meta, re, scopes);
+        if (hits.length) {
+          var arr = map.get(meta.groupKey);
+          if (!arr) { arr = { key: meta.groupKey, meta: meta, hits: [] }; map.set(meta.groupKey, arr); }
+          for (var h = 0; h < hits.length; h++) arr.hits.push(hits[h]);
+          total += hits.length;
+        }
+      }
+      var pct = state.entries.length ? Math.round(end / state.entries.length * 100) : 100;
+      $('prog').style.width = pct + '%';
+
+      if (i < state.entries.length) {
+        setTimeout(step, 0);
+        return;
+      }
+
+      var groups = Array.from(map.values());
+      groups.forEach(function (g) { g.expanded = groups.length <= 12; });
+      groups.sort(function (a, b) {
+        if (b.hits.length !== a.hits.length) return b.hits.length - a.hits.length;
+        return a.key < b.key ? -1 : 1;
+      });
+
+      state.matchMap = map;
+      state.groups = groups;
+      state.hitCount = total;
+      updateStats();
+      if (switchTab && groups.length) setTab('matches');
+      render();
+      $('progWrap').hidden = true;
+      $('btnSearch').disabled = false;
+      if (immediate) toast(groups.length ? ('命中 ' + groups.length + ' 个接口 / ' + total + ' 处') : '未找到匹配内容');
+    })();
+  }
+
+  /* ============================================================
+   * 渲染
+   * ============================================================ */
+  function setTab(t) {
+    state.tab = t;
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('on', tabs[i].dataset.tab === t);
+  }
+
+  function render() {
+    if (state.tab === 'matches') renderMatches();
+    else renderAll();
+  }
+
+  function filteredEntries() {
+    var list = [];
+    for (var i = 0; i < state.entries.length; i++) if (entryPassFilter(state.entries[i])) list.push(state.entries[i]);
+    return list;
+  }
+
+  function hitRowHtml(hit, entryIndex, hiIndex) {
+    return '<div class="hit-row" data-idx="' + entryIndex + '" data-scope="' + esc(hit.scope) +
+      '" data-loc="' + esc(hit.location) + '" data-hi="' + hiIndex + '">' +
+      '<div class="hit-loc">' +
+        '<span class="scope-tag">' + esc(hit.scope) + ' · ' + esc(hit.location) + '</span>' +
+        (hit.path ? '<span class="hit-path">' + esc(hit.path) + '</span>' : '') +
+      '</div>' +
+      '<div class="hit-snippet">' + highlight(hit.snippet, state.regex) + '</div>' +
+      '<div class="hit-actions"><button class="btn sm" data-open="' + entryIndex + '">详情</button></div>' +
+    '</div>';
+  }
+
+  function tabForHit(scope, location) {
+    if (scope === '请求头') return 'reqHeader';
+    if (scope === '请求体') return 'reqBody';
+    if (scope === '响应头') return 'resHeader';
+    if (scope === '响应体') return 'resBody';
+    if (scope === 'Cookie') return /响应/.test(location || '') ? 'resHeader' : 'reqHeader';
+    return 'overview';
+  }
+
+  function renderMatches() {
+    var box = $('results');
+    if (!state.query.trim()) {
+      box.innerHTML = '<div class="hint" style="padding:26px 4px">请在左侧输入关键字开始检索。检索会覆盖 URL、Query 参数、请求头、请求体、响应头、响应体与 Cookie。</div>';
+      return;
+    }
+    if (!state.groups.length) {
+      box.innerHTML = '<div class="err-box">未找到包含「' + esc(state.query) + '」的内容。<br>可尝试：放宽「检索范围」、取消勾选「区分大小写」、或关闭「正则」模式。</div>';
+      return;
+    }
+    var html = '';
+    state.groups.forEach(function (g, gi) {
+      var m = g.meta;
+      var shown = g.hits.slice(0, 60);
+      var rows = shown.map(function (hit, hi) { return hitRowHtml(hit, m.index, hi); }).join('');
+      var more = g.hits.length > shown.length
+        ? '<div class="more-row" data-more="' + gi + '">还有 ' + (g.hits.length - shown.length) + ' 处命中，点击展开全部</div>'
+        : '';
+      html += '<div class="group-card' + (g.expanded ? ' open' : '') + '" data-gi="' + gi + '">' +
+        '<div class="group-head" data-toggle="' + gi + '">' +
+          '<span class="caret">&#9654;</span>' +
+          '<span class="m m-' + methodClass(m.method) + '">' + esc(m.method) + '</span>' +
+          '<span class="group-path">' + highlight(m.pathname, state.regex) + '</span>' +
+          '<span class="group-host">' + esc(m.origin) + '</span>' +
+          '<span class="group-meta">' +
+            '<span class="' + statusClass(m.status) + '">' + m.status + '</span>' +
+            '<span class="hit-badge">' + g.hits.length + ' 处</span>' +
+          '</span>' +
+        '</div>' +
+        '<div class="group-body">' + rows + more + '</div>' +
+      '</div>';
+    });
+    box.innerHTML = html;
+  }
+
+  function renderAll() {
+    var list = filteredEntries();
+    if (!list.length) {
+      $('results').innerHTML = '<div class="err-box">当前过滤条件下没有接口。</div>';
+      return;
+    }
+    var MAX = 400;
+    var shown = list.slice(0, MAX);
+    var rows = shown.map(function (m) {
+      var hitN = state.matchMap.has(m.groupKey) ? state.matchMap.get(m.groupKey).hits.length : 0;
+      return '<tr data-idx="' + m.index + '">' +
+        '<td><span class="m m-' + methodClass(m.method) + '">' + esc(m.method) + '</span></td>' +
+        '<td class="td-url">' + highlight(m.url, state.regex) + '</td>' +
+        '<td class="' + statusClass(m.status) + '">' + (m.status || '-') + '</td>' +
+        '<td class="num">' + esc(m.mimeShort) + '</td>' +
+        '<td class="num">' + fmtSize(m.size) + '</td>' +
+        '<td class="num">' + fmtTime(m.time) + '</td>' +
+        '<td class="num">' + (hitN ? '<span class="hit-badge">' + hitN + '</span>' : '<span class="muted">-</span>') + '</td>' +
+      '</tr>';
+    }).join('');
+    var note = list.length > MAX
+      ? '<div class="hint" style="padding:8px 2px">共 ' + list.length + ' 条，仅显示前 ' + MAX + ' 条。请使用左侧「接口过滤」或关键字缩小范围。</div>'
+      : '';
+    $('results').innerHTML =
+      '<div class="tbl-wrap"><table><thead><tr>' +
+      '<th style="width:80px">方法</th><th>URL</th><th style="width:62px">状态</th>' +
+      '<th style="width:70px">类型</th><th style="width:82px">大小</th><th style="width:82px">耗时</th><th style="width:72px">命中</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>' + note;
+  }
+
+  function methodClass(m) {
+    return ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'].indexOf(m) >= 0 ? m : 'OTHER';
+  }
+  function statusClass(s) {
+    if (!s) return 'muted';
+    if (s >= 500) return 's-err';
+    if (s >= 400) return 's-err';
+    if (s >= 300) return 's-redir';
+    if (s >= 200) return 's-ok';
+    return 'muted';
+  }
+
+  /* ============================================================
+   * 详情抽屉
+   * ============================================================ */
+  var DETAIL_TABS = [
+    { id: 'overview', name: '概览' },
+    { id: 'reqHeader', name: '请求头' },
+    { id: 'reqBody', name: '请求体' },
+    { id: 'resHeader', name: '响应头' },
+    { id: 'resBody', name: '响应体' },
+    { id: 'curl', name: 'cURL' }
+  ];
+
+  function openDrawer(meta, tab) {
+    state.detail.meta = meta;
+    state.detail.tab = tab || 'overview';
+    $('dMethod').textContent = meta.method;
+    $('dMethod').className = 'm m-' + methodClass(meta.method);
+    $('dPath').textContent = meta.url;
+    renderDrawerTabs();
+    renderDrawerBody();
+    $('drawer').classList.add('on');
+    $('mask').classList.add('on');
+  }
+  function closeDrawer() {
+    $('drawer').classList.remove('on');
+    $('mask').classList.remove('on');
+    state.detail.meta = null;
+  }
+  function renderDrawerTabs() {
+    var m = state.detail.meta;
+    var midCounts = { reqHeader: 0, reqBody: 0, resHeader: 0, resBody: 0 };
+    if (m && state.matchMap.has(m.groupKey)) {
+      state.matchMap.get(m.groupKey).hits.forEach(function (h) {
+        if (h.scope === '请求头') midCounts.reqHeader++;
+        else if (h.scope === '请求体') midCounts.reqBody++;
+        else if (h.scope === '响应头') midCounts.resHeader++;
+        else if (h.scope === '响应体') midCounts.resBody++;
+      });
+    }
+    $('dTabs').innerHTML = DETAIL_TABS.map(function (t) {
+      var c = midCounts[t.id];
+      return '<button class="tab' + (state.detail.tab === t.id ? ' on' : '') + '" data-dtab="' + t.id + '">' +
+        esc(t.name) + (c ? '<span class="cnt">' + c + '</span>' : '') + '</button>';
+    }).join('');
+  }
+
+  function prettyJson(text) {
+    try { return JSON.stringify(JSON.parse(text), null, 2); } catch (e) { return text; }
+  }
+
+  function preBlock(text) {
+    return '<pre class="code">' + highlight(text, state.regex) + '</pre>';
+  }
+
+  function renderDrawerBody() {
+    var m = state.detail.meta;
+    if (!m) return;
+    var e = m.entry;
+    var req = e.request || {};
+    var res = e.response || {};
+    var tab = state.detail.tab;
+    var body = '';
+
+    if (tab === 'overview') {
+      var rows = [
+        ['请求方法', m.method],
+        ['完整 URL', m.url],
+        ['主机', m.origin || '-'],
+        ['路径', m.pathname],
+        ['状态码', (res.status || '-') + ' ' + (res.statusText || '')],
+        ['响应类型', m.mime || '-'],
+        ['响应大小', fmtSize(m.size)],
+        ['总耗时', fmtTime(m.time)],
+        ['开始时间', fmtDateTime(m.started)],
+        ['请求体大小', fmtSize(typeof req.bodySize === 'number' ? req.bodySize : null)],
+        ['HTTP 版本', res.httpVersion || req.httpVersion || '-']
+      ];
+      var t = e.timings || {};
+      var timingRows = ['blocked', 'dns', 'connect', 'ssl', 'send', 'wait', 'receive']
+        .filter(function (k) { return typeof t[k] === 'number' && t[k] >= 0; })
+        .map(function (k) { return k + ': ' + Math.round(t[k]) + ' ms'; }).join(' &nbsp;|&nbsp; ');
+      body += '<p class="sub">基本信息</p><div class="kv">' +
+        rows.map(function (r) { return '<div class="k">' + esc(r[0]) + '</div><div class="v">' + esc(r[1]) + '</div>'; }).join('') +
+        '</div>';
+      if (timingRows) body += '<p class="sub">Timings</p><div class="kv"><div class="k">阶段耗时</div><div class="v">' + timingRows + '</div></div>';
+      if (m.query.length) {
+        body += '<p class="sub">Query 参数（' + m.query.length + '）</p><div class="kv">' +
+          m.query.map(function (kv) {
+            return '<div class="k">' + highlight(kv[0], state.regex) + '</div><div class="v">' + highlight(kv[1], state.regex) + '</div>';
+          }).join('') + '</div>';
+      }
+      if (e.pageref) body += '<p class="sub">所属页面</p><div class="kv"><div class="k">pageref</div><div class="v">' + esc(e.pageref) + '</div></div>';
+    }
+
+    if (tab === 'reqHeader') {
+      var hs = req.headers || [];
+      body += '<p class="sub">请求行</p><div class="url-box">' + highlight(m.method + ' ' + m.pathname + (m.query.length ? '?' + m.query.map(function (k) { return k[0] + '=' + k[1]; }).join('&') : '') + ' HTTP/1.1', state.regex) + '</div>';
+      body += '<p class="sub">请求头（' + hs.length + '）</p>';
+      body += hs.length
+        ? preBlock(hs.map(function (h) { return (h.name || '') + ': ' + (h.value == null ? '' : h.value); }).join('\n'))
+        : '<div class="hint">无</div>';
+    }
+
+    if (tab === 'reqBody') {
+      var pd = req.postData;
+      if (!pd) {
+        body += '<div class="hint">该请求没有请求体。</div>';
+      } else {
+        body += '<p class="sub">Content-Type</p><div class="url-box">' + esc(pd.mimeType || '-') + '</div>';
+        if (Array.isArray(pd.params) && pd.params.length) {
+          body += '<p class="sub">表单参数（' + pd.params.length + '）</p><div class="kv">' +
+            pd.params.map(function (p) {
+              return '<div class="k">' + highlight(p.name || '', state.regex) + '</div><div class="v">' + highlight(p.value == null ? '' : p.value, state.regex) + '</div>';
+            }).join('') + '</div>';
+        }
+        if (pd.text) {
+          body += '<p class="sub">原始内容</p>' + preBlock(prettyJson(pd.text));
+        } else if (!pd.params) {
+          body += '<div class="hint">请求体内容未记录（导出 HAR 时未勾选 with content）。</div>';
+        }
+      }
+    }
+
+    if (tab === 'resHeader') {
+      var rhs = res.headers || [];
+      body += '<p class="sub">状态行</p><div class="url-box">HTTP/1.1 ' + esc((res.status || '') + ' ' + (res.statusText || '')) + '</div>';
+      body += '<p class="sub">响应头（' + rhs.length + '）</p>';
+      body += rhs.length
+        ? preBlock(rhs.map(function (h) { return (h.name || '') + ': ' + (h.value == null ? '' : h.value); }).join('\n'))
+        : '<div class="hint">无</div>';
+      var cks = res.cookies || [];
+      if (cks.length) {
+        body += '<p class="sub">Set-Cookie（' + cks.length + '）</p><div class="kv">' +
+          cks.map(function (c) {
+            return '<div class="k">' + highlight(c.name || '', state.regex) + '</div><div class="v">' + highlight(String(c.value == null ? '' : c.value), state.regex) + '</div>';
+          }).join('') + '</div>';
+      }
+    }
+
+    if (tab === 'resBody') {
+      var content = res.content || {};
+      var text = getResText(m);
+      body += '<p class="sub">Content-Type</p><div class="url-box">' + esc(content.mimeType || '-') +
+        (content.encoding ? ' &nbsp;·&nbsp; encoding: ' + esc(content.encoding) : '') +
+        ' &nbsp;·&nbsp; size: ' + fmtSize(m.size) + '</div>';
+      if (text == null || text === '') {
+        body += '<div class="hint">' + (content.text
+          ? '响应体为二进制内容（' + esc(content.mimeType || '未知类型') + '），已跳过文本检索。'
+          : '响应体内容未记录（导出 HAR 时未勾选 with content）。') + '</div>';
+      } else {
+        var isJson = false;
+        try { JSON.parse(text); isJson = true; } catch (err) { isJson = false; }
+        body += '<div class="toolbar-row"><span class="hint">' + (text.length).toLocaleString() + ' 字符</span>' +
+          '<button class="btn sm" id="dCopyBody">复制响应体</button></div>';
+        body += preBlock(isJson ? prettyJson(text) : text);
+      }
+    }
+
+    if (tab === 'curl') {
+      body += '<p class="sub">cURL 命令</p>' + preBlock(toCurl(e));
+      body += '<div class="toolbar-row" style="margin-top:10px"><button class="btn sm" id="dCurlCopy2">复制命令</button></div>';
+    }
+
+    var db = $('dBody');
+    db.innerHTML = body;
+    db.scrollTop = 0;
+
+    var copyBody = $('dCopyBody');
+    if (copyBody) copyBody.onclick = function () { copyText(getResText(m) || '', '响应体已复制'); };
+    var c2 = $('dCurlCopy2');
+    if (c2) c2.onclick = function () { copyText(toCurl(m.entry), 'cURL 已复制'); };
+
+    // 高亮定位：滚动到对应命中
+    if (state.regex && state.query.trim()) {
+      var marks = db.querySelectorAll('mark');
+      var fi = state.detail.focusHit;
+      var target = (fi >= 0 && fi < marks.length) ? marks[fi] : marks[0];
+      if (target && target.scrollIntoView) target.scrollIntoView({ block: 'center' });
+    }
+  }
+
+  function toCurl(entry) {
+    var req = entry.request || {};
+    var lines = ["curl -X " + (req.method || 'GET') + " '" + (req.url || '') + "'"];
+    (req.headers || []).forEach(function (h) {
+      var n = String(h.name || '');
+      if (/^(cookie|content-length|host)$/i.test(n)) return;
+      lines.push("  -H '" + n + ": " + String(h.value == null ? '' : h.value).replace(/'/g, "'\\''") + "'");
+    });
+    var pd = req.postData;
+    if (pd && typeof pd.text === 'string' && pd.text) {
+      lines.push("  --data-raw '" + pd.text.replace(/'/g, "'\\''") + "'");
+    }
+    return lines.join(' \\\n');
+  }
+
+  /* ============================================================
+   * 导出
+   * ============================================================ */
+  function exportJson() {
+    var out = {
+      har: state.fileName,
+      keyword: state.query,
+      generatedAt: new Date().toISOString(),
+      totalEndpoints: state.groups.length,
+      totalHits: state.hitCount,
+      results: state.groups.map(function (g) {
+        var m = g.meta;
+        return {
+          method: m.method,
+          path: m.pathname,
+          host: m.origin,
+          sampleUrl: m.url,
+          status: m.status,
+          mimeType: m.mime,
+          hitCount: g.hits.length,
+          hits: g.hits.map(function (h) {
+            return { scope: h.scope, location: h.location, path: h.path, snippet: h.snippet };
+          })
+        };
+      })
+    };
+    download(JSON.stringify(out, null, 2), 'har-hits.json', 'application/json');
+    toast('已导出命中结果 JSON');
+  }
+
+  function exportCsv() {
+    var rows = [['method', 'host', 'path', 'sampleUrl', 'status', 'scope', 'location', 'path', 'snippet']];
+    state.groups.forEach(function (g) {
+      var m = g.meta;
+      g.hits.forEach(function (h) {
+        rows.push([m.method, m.origin, m.pathname, m.url, String(m.status), h.scope, h.location, h.path || '', h.snippet]);
+      });
+    });
+    var csv = '\ufeff' + rows.map(function (r) {
+      return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\r\n');
+    download(csv, 'har-hits.csv', 'text/csv');
+    toast('已导出 CSV');
+  }
+
+  function download(text, name, mime) {
+    var blob = new Blob([text], { type: mime + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  }
+
+  /* ============================================================
+   * 事件绑定
+   * ============================================================ */
+  function pickFile(file) {
+    if (!file) return;
+    if (file.size > 400 * 1024 * 1024) {
+      alert('文件超过 400MB，浏览器可能内存不足。建议先在 DevTools 中用过滤条件缩小导出范围。');
+    }
+    var fr = new FileReader();
+    fr.onload = function () { loadHarText(String(fr.result), file.name); };
+    fr.onerror = function () { alert('读取文件失败。'); };
+    fr.readAsText(file, 'utf-8');
+  }
+
+  $('btnOpen').onclick = function () { $('fileInput').click(); };
+  $('btnOpen2').onclick = function () { $('fileInput').click(); };
+  $('fileInput').onchange = function (ev) { pickFile(ev.target.files && ev.target.files[0]); };
+  $('btnClear').onclick = function () { resetToEmpty(); };
+  $('btnSample').onclick = function () { loadSample(); };
+
+  $('dropCard').ondragover = function (e) { e.preventDefault(); $('dropCard').classList.add('hot'); };
+  $('dropCard').ondragleave = function () { $('dropCard').classList.remove('hot'); };
+  $('dropCard').ondrop = function (e) {
+    e.preventDefault();
+    $('dropCard').classList.remove('hot');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    pickFile(f);
+  };
+
+  // 全局拖拽
+  var dragDepth = 0;
+  window.addEventListener('dragenter', function (e) {
+    if (!e.dataTransfer) return;
+    if (Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') < 0) return;
+    dragDepth++;
+    $('dragOverlay').classList.add('on');
+  });
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('dragleave', function () { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('dragOverlay').classList.remove('on'); });
+  window.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dragDepth = 0;
+    $('dragOverlay').classList.remove('on');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) pickFile(f);
+  });
+
+  // 搜索
+  var debounceTimer = null;
+  $('q').addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function () { runSearch(false, true); }, 320);
+  });
+  $('q').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { clearTimeout(debounceTimer); runSearch(true, true); }
+  });
+  $('btnSearch').onclick = function () { runSearch(true, true); };
+  $('optCase').onchange = function () { if (state.query.trim()) runSearch(false, true); };
+  $('optRegex').onchange = function () { if (state.query.trim()) runSearch(false, true); };
+  $('fMethod').onchange = onFilterChange;
+  $('fType').onchange = onFilterChange;
+  function onFilterChange() {
+    if (state.query.trim()) runSearch(false, false);
+    else render();
+  }
+
+  // 范围 chips
+  $('scopes').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.chip') : null;
+    if (!b) return;
+    b.classList.toggle('on');
+    if (state.query.trim()) runSearch(false, true);
+  });
+  function setScopes(list) {
+    var chips = document.querySelectorAll('#scopes .chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].classList.toggle('on', list.indexOf(chips[i].dataset.scope) >= 0);
+    }
+    if (state.query.trim()) runSearch(false, true);
+  }
+  $('scopeAll').onclick = function () { setScopes(DEFAULT_SCOPES); };
+  $('scopeNone').onclick = function () { setScopes([]); };
+  $('scopeReset').onclick = function () { setScopes(DEFAULT_SCOPES); };
+
+  // Tab
+  document.querySelector('.tabs').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.tab') : null;
+    if (!b) return;
+    setTab(b.dataset.tab);
+    render();
+  });
+
+  // 结果区事件委托
+  $('results').addEventListener('click', function (e) {
+    var t = e.target;
+    var openBtn = t.closest && t.closest('[data-open]');
+    if (openBtn) { openHit(openBtn.closest('.hit-row') || openBtn); return; }
+    var more = t.closest && t.closest('[data-more]');
+    if (more) {
+      var gi = parseInt(more.dataset.more, 10);
+      var g = state.groups[gi];
+      if (g) {
+        g.expanded = true;
+        var card = document.querySelector('.group-card[data-gi="' + gi + '"]');
+        if (card) {
+          card.classList.add('open');
+          card.querySelector('.group-body').innerHTML = g.hits.map(function (hit, hi) {
+            return hitRowHtml(hit, g.meta.index, hi);
+          }).join('');
+        }
+      }
+      return;
+    }
+    var head = t.closest && t.closest('[data-toggle]');
+    if (head) {
+      var card2 = head.parentNode;
+      card2.classList.toggle('open');
+      var g2 = state.groups[parseInt(head.dataset.toggle, 10)];
+      if (g2) g2.expanded = card2.classList.contains('open');
+      return;
+    }
+    var row = t.closest && t.closest('.hit-row, tr[data-idx]');
+    if (row && row.dataset.idx) {
+      if (row.classList.contains('hit-row')) openHit(row);
+      else openEntryByIndex(parseInt(row.dataset.idx, 10));
+    }
+  });
+
+  function openHit(rowEl) {
+    if (!rowEl || !rowEl.dataset) return;
+    openEntryByIndex(
+      parseInt(rowEl.dataset.idx, 10),
+      rowEl.dataset.scope || '',
+      rowEl.dataset.loc || '',
+      parseInt(rowEl.dataset.hi || '0', 10)
+    );
+  }
+
+  function openEntryByIndex(idx, scope, location, hi) {
+    var meta = null;
+    for (var i = 0; i < state.entries.length; i++) if (state.entries[i].index === idx) { meta = state.entries[i]; break; }
+    if (!meta) return;
+    var tab = 'overview';
+    if (scope) {
+      tab = tabForHit(scope, location);
+    } else if (state.matchMap.has(meta.groupKey) && state.query.trim()) {
+      var hits = state.matchMap.get(meta.groupKey).hits;
+      tab = tabForHit(hits[0].scope, hits[0].location);
+    }
+    state.detail.focusHit = (hi == null || isNaN(hi)) ? -1 : hi;
+    openDrawer(meta, tab);
+  }
+
+  // 抽屉
+  $('dClose').onclick = closeDrawer;
+  $('mask').onclick = closeDrawer;
+  $('dCurl').onclick = function () { if (state.detail.meta) copyText(toCurl(state.detail.meta.entry), 'cURL 已复制'); };
+  $('dTabs').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-dtab]') : null;
+    if (!b) return;
+    state.detail.tab = b.dataset.dtab;
+    state.detail.focusHit = -1;
+    renderDrawerTabs();
+    renderDrawerBody();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDrawer();
+  });
+
+  $('btnExportJson').onclick = exportJson;
+  $('btnExportCsv').onclick = exportCsv;
+
+  /* ============================================================
+   * 内置示例 HAR（便于快速体验，不联网）
+   * ============================================================ */
+  function loadSample() {
+    var now = Date.now();
+    var ts = function (off) { return new Date(now - 60000 + off).toISOString(); };
+    var H = function (arr) { return arr.map(function (p) { return { name: p[0], value: p[1] }; }); };
+    var entries = [
+      {
+        startedDateTime: ts(0), time: 128, pageref: 'page_1',
+        request: {
+          method: 'GET',
+          url: 'https://api.demo-shop.com/v1/orders?userId=10086&page=1&keyword=%E5%BC%A0%E4%B8%89',
+          httpVersion: 'HTTP/1.1',
+          headers: H([['Host', 'api.demo-shop.com'], ['Authorization', 'Bearer eyJhbGciOiJIUzI1NiJ9.demo'], ['Accept', 'application/json'], ['Cookie', 'SESSIONID=abc123xyz; _ga=GA1.2.99'], ['User-Agent', 'Mozilla/5.0 Chrome/126.0']]),
+          queryString: [{ name: 'userId', value: '10086' }, { name: 'page', value: '1' }, { name: 'keyword', value: '张三' }],
+          cookies: [{ name: 'SESSIONID', value: 'abc123xyz' }, { name: '_ga', value: 'GA1.2.99' }],
+          headersSize: -1, bodySize: 0
+        },
+        response: {
+          status: 200, statusText: 'OK', httpVersion: 'HTTP/1.1',
+          headers: H([['Content-Type', 'application/json; charset=utf-8'], ['Server', 'nginx'], ['Set-Cookie', 'traceId=t-9988; Path=/']]),
+          cookies: [{ name: 'traceId', value: 't-9988' }],
+          content: {
+            size: 486, mimeType: 'application/json; charset=utf-8',
+            text: JSON.stringify({
+              code: 0, msg: 'ok',
+              data: {
+                total: 2,
+                list: [
+                  { orderId: 'SO20260922001', userName: '张三', amount: 199.5, phone: '13800138000', status: 'PAID' },
+                  { orderId: 'SO20260922002', userName: '张三丰', amount: 88, phone: '13900139000', status: 'PENDING' }
+                ]
+              }
+            })
+          },
+          redirectURL: '', headersSize: -1, bodySize: 486
+        },
+        timings: { blocked: 2, dns: 6, connect: 18, ssl: 22, send: 1, wait: 72, receive: 7 }
+      },
+      {
+        startedDateTime: ts(400), time: 342, pageref: 'page_1',
+        request: {
+          method: 'POST',
+          url: 'https://api.demo-shop.com/v1/login',
+          httpVersion: 'HTTP/1.1',
+          headers: H([['Host', 'api.demo-shop.com'], ['Content-Type', 'application/json; charset=utf-8'], ['Origin', 'https://www.demo-shop.com']]),
+          queryString: [], cookies: [],
+          postData: {
+            mimeType: 'application/json; charset=utf-8',
+            text: JSON.stringify({ username: 'zhangsan', password: 'P@ssw0rd!2026', captcha: '8842', rememberMe: true })
+          },
+          headersSize: -1, bodySize: 96
+        },
+        response: {
+          status: 200, statusText: 'OK', httpVersion: 'HTTP/1.1',
+          headers: H([['Content-Type', 'application/json; charset=utf-8']]),
+          cookies: [{ name: 'SESSIONID', value: 'new-session-7788' }],
+          content: {
+            size: 220, mimeType: 'application/json; charset=utf-8',
+            text: JSON.stringify({ code: 0, msg: '登录成功', data: { token: 'eyJhbGciOiJIUzI1NiJ9.sample.token', userId: 10086, nickName: '张三', role: 'vip' } })
+          },
+          redirectURL: '', headersSize: -1, bodySize: 220
+        },
+        timings: { blocked: 1, dns: 5, connect: 15, ssl: 20, send: 2, wait: 268, receive: 8 }
+      },
+      {
+        startedDateTime: ts(900), time: 76, pageref: 'page_1',
+        request: {
+          method: 'GET',
+          url: 'https://api.demo-shop.com/v1/users/10086/profile',
+          httpVersion: 'HTTP/1.1',
+          headers: H([['Host', 'api.demo-shop.com'], ['Accept', 'application/json']]),
+          queryString: [], cookies: [], headersSize: -1, bodySize: 0
+        },
+        response: {
+          status: 200, statusText: 'OK', httpVersion: 'HTTP/1.1',
+          headers: H([['Content-Type', 'application/json; charset=utf-8']]),
+          cookies: [],
+          content: {
+            size: 512, mimeType: 'application/json; charset=utf-8',
+            text: JSON.stringify({
+              code: 0,
+              data: {
+                userId: 10086,
+                profile: { realName: '张三', idCard: '4101**********1234', mobile: '13800138000', level: 'GOLD' },
+                addresses: [{ id: 1, city: '郑州市', detail: '金水区某某路 88 号', receiver: '张三', mobile: '13800138000' }],
+                tags: ['高频用户', '已实名']
+              }
+            })
+          },
+          redirectURL: '', headersSize: -1, bodySize: 512
+        },
+        timings: { blocked: 1, dns: 0, connect: 0, ssl: 0, send: 1, wait: 68, receive: 6 }
+      },
+      {
+        startedDateTime: ts(1400), time: 214, pageref: 'page_1',
+        request: {
+          method: 'POST',
+          url: 'https://api.demo-shop.com/v1/pay/create',
+          httpVersion: 'HTTP/1.1',
+          headers: H([['Host', 'api.demo-shop.com'], ['Content-Type', 'application/x-www-form-urlencoded']]),
+          queryString: [], cookies: [],
+          postData: {
+            mimeType: 'application/x-www-form-urlencoded',
+            params: [
+              { name: 'orderId', value: 'SO20260922001' },
+              { name: 'payChannel', value: 'WECHAT' },
+              { name: 'amount', value: '199.50' },
+              { name: 'notifyUrl', value: 'https://www.demo-shop.com/pay/notify' }
+            ],
+            text: 'orderId=SO20260922001&payChannel=WECHAT&amount=199.50&notifyUrl=https%3A%2F%2Fwww.demo-shop.com%2Fpay%2Fnotify'
+          },
+          headersSize: -1, bodySize: 112
+        },
+        response: {
+          status: 200, statusText: 'OK', httpVersion: 'HTTP/1.1',
+          headers: H([['Content-Type', 'application/json; charset=utf-8']]),
+          cookies: [],
+          content: {
+            size: 168, mimeType: 'application/json; charset=utf-8',
+            text: JSON.stringify({ code: 0, msg: '下单成功', data: { payNo: 'PAY20260922000123', orderId: 'SO20260922001', expireAt: '2026-09-22T10:00:00+08:00' } })
+          },
+          redirectURL: '', headersSize: -1, bodySize: 168
+        },
+        timings: { blocked: 1, dns: 0, connect: 0, ssl: 0, send: 1, wait: 205, receive: 7 }
+      },
+      {
+        startedDateTime: ts(1900), time: 51, pageref: 'page_1',
+        request: {
+          method: 'GET',
+          url: 'https://static.demo-shop.com/assets/app.7f3c2b.js',
+          httpVersion: 'HTTP/1.1',
+          headers: H([['Host', 'static.demo-shop.com'], ['Accept', '*/*']]),
+          queryString: [], cookies: [], headersSize: -1, bodySize: 0
+        },
+        response: {
+          status: 200, statusText: 'OK', httpVersion: 'HTTP/1.1',
+          headers: H([['Content-Type', 'application/javascript; charset=utf-8'], ['Cache-Control', 'max-age=31536000']]),
+          cookies: [],
+          content: {
+            size: 312, mimeType: 'application/javascript; charset=utf-8',
+            text: "function queryOrders(userId){\n  var url = '/v1/orders?userId=' + userId + '&keyword=张三';\n  return fetch(url).then(r => r.json());\n}\nfunction getOrderId(o){ return o.orderId; }\nwindow.__DEMO__ = { queryOrders: queryOrders };\n"
+          },
+          redirectURL: '', headersSize: -1, bodySize: 312
+        },
+        timings: { blocked: 0, dns: 1, connect: 3, ssl: 0, send: 0, wait: 44, receive: 3 }
+      },
+      {
+        startedDateTime: ts(2400), time: 63, pageref: 'page_1',
+        request: {
+          method: 'GET',
+          url: 'https://api.demo-shop.com/v1/legacy/orders/export',
+          httpVersion: 'HTTP/1.1',
+          headers: H([['Host', 'api.demo-shop.com']]),
+          queryString: [], cookies: [], headersSize: -1, bodySize: 0
+        },
+        response: {
+          status: 404, statusText: 'Not Found', httpVersion: 'HTTP/1.1',
+          headers: H([['Content-Type', 'text/html; charset=utf-8']]),
+          cookies: [],
+          content: {
+            size: 214, mimeType: 'text/html; charset=utf-8',
+            text: '<!DOCTYPE html>\n<html>\n<head><title>404 Not Found</title></head>\n<body>\n<h1>404 Not Found</h1>\n<p>请求的导出接口 /v1/legacy/orders/export 已下线，请改用 /v1/orders/export。</p>\n<p>traceId: err-20260922-0001</p>\n</body>\n</html>'
+          },
+          redirectURL: '', headersSize: -1, bodySize: 214
+        },
+        timings: { blocked: 1, dns: 0, connect: 0, ssl: 0, send: 1, wait: 58, receive: 3 }
+      },
+      {
+        startedDateTime: ts(2900), time: 18, pageref: 'page_1',
+        request: {
+          method: 'GET',
+          url: 'https://static.demo-shop.com/assets/logo.png',
+          httpVersion: 'HTTP/1.1',
+          headers: H([['Host', 'static.demo-shop.com']]),
+          queryString: [], cookies: [], headersSize: -1, bodySize: 0
+        },
+        response: {
+          status: 200, statusText: 'OK', httpVersion: 'HTTP/1.1',
+          headers: H([['Content-Type', 'image/png']]),
+          cookies: [],
+          content: {
+            size: 68, mimeType: 'image/png', encoding: 'base64',
+            text: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+          },
+          redirectURL: '', headersSize: -1, bodySize: 68
+        },
+        timings: { blocked: 0, dns: 0, connect: 0, ssl: 0, send: 0, wait: 16, receive: 2 }
+      },
+      {
+        startedDateTime: ts(3200), time: 890, pageref: 'page_1',
+        request: {
+          method: 'PUT',
+          url: 'https://api.demo-shop.com/v1/users/10086/profile',
+          httpVersion: 'HTTP/1.1',
+          headers: H([['Host', 'api.demo-shop.com'], ['Content-Type', 'application/json; charset=utf-8'], ['X-Trace-Id', 'trace-abc-123']]),
+          queryString: [], cookies: [],
+          postData: {
+            mimeType: 'application/json; charset=utf-8',
+            text: JSON.stringify({ realName: '张三', mobile: '13800138000', remark: '更新收货人：张三' })
+          },
+          headersSize: -1, bodySize: 88
+        },
+        response: {
+          status: 500, statusText: 'Internal Server Error', httpVersion: 'HTTP/1.1',
+          headers: H([['Content-Type', 'application/json; charset=utf-8']]),
+          cookies: [],
+          content: {
+            size: 152, mimeType: 'application/json; charset=utf-8',
+            text: JSON.stringify({ code: 50001, msg: '保存失败：数据校验异常', data: null, traceId: 'trace-abc-123' })
+          },
+          redirectURL: '', headersSize: -1, bodySize: 152
+        },
+        timings: { blocked: 2, dns: 0, connect: 0, ssl: 0, send: 1, wait: 880, receive: 7 }
+      }
+    ];
+    var har = {
+      log: {
+        version: '1.2',
+        creator: { name: 'Chrome DevTools (内置示例)', version: '126.0' },
+        browser: { name: 'Chrome', version: '126.0' },
+        pages: [{ startedDateTime: ts(0), id: 'page_1', title: '示例商城 - 订单页', pageTimings: { onContentLoad: 620, onLoad: 1180 } }],
+        entries: entries
+      }
+    };
+    loadHarText(JSON.stringify(har), '示例数据.har');
+    toast('已载入示例，试试搜索 “张三” 或 “orderId”');
+  }
+
+})();
+</script>
+</body>
+</html>
