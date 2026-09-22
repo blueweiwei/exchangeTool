@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="zh-CN" data-page-node-id="WYUGfJ8u19JftmzEoxF1hq">
+<head data-page-node-id="MaC4Kk3J0XWuxYY4lDeUKx">
+<meta charset="UTF-8" data-page-node-id="a5XbEawDg1IiT9Bg60FMPQ">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="mH3T2bBe6F1oHV6S6QtStJ">
 <title>HAR 接口检索器 · 本地解析</title>
 <style>
   /* ============================================================
@@ -22,6 +22,9 @@
     --accent:#22d3ee;
     --accent-dim:rgba(34,211,238,0.12);
     --accent-glow:rgba(34,211,238,0.18);
+    /* 日间模式强调色：本页按钮是「淡色底 + 强调色字」写法，
+       故只声明文字/边框用的 --accent-light，不声明 --accent-solid */
+    --accent-light:#0e7490;
     --green:#34d399;
     --green-dim:rgba(52,211,153,0.12);
     --orange:#fbbf24;
@@ -75,9 +78,9 @@
   }
 
   /* ---------- 顶栏 ---------- */
-  /* 左侧留出 96px 给固定定位的「返回首页」按钮，避免与 logo 重叠 */
+  /* 左侧留出 124px 给固定定位的「返回首页 + 主题切换」两个按钮，避免与 logo 重叠 */
   .topbar{
-    display:flex;align-items:center;gap:16px;padding:10px 18px 10px 96px;
+    display:flex;align-items:center;gap:16px;padding:10px 18px 10px 124px;
     background:rgba(20,25,34,0.85);border-bottom:1px solid var(--border);
     backdrop-filter:blur(12px);
     position:sticky;top:0;z-index:30;
@@ -329,124 +332,127 @@
     border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;margin-bottom:10px;
   }
 </style>
+
+<!-- 全局主题：夜间 / 日间切换（localStorage 持久化，跨页面生效） -->
+<script src="js/theme.js"></script>
 </head>
-<body>
+<body data-page-node-id="TEljg8E08hAHa3VhU6mRh6">
 
 <!-- 返回首页（固定左上角，与其它工具页保持一致） -->
-<a class="back-home" href="index.html">&larr; 首页</a>
+<a class="back-home" href="index.html" data-page-node-id="6HzBrk9bTcwyiuVwmzQN5z">&larr; 首页</a>
 
-<header class="topbar">
-  <div class="brand">
-    <div class="logo">HAR</div>
-    <div>
-      <h1>HAR 接口检索器</h1>
-      <p>本地解析 · 文件不上传 · 不请求任何第三方接口</p>
+<header class="topbar" data-page-node-id="gsdPn7fXHdCwtfbLgDjFSF">
+  <div class="brand" data-page-node-id="r0nrPG59l1Cg5ZmE4CZwXo">
+    <div class="logo" data-page-node-id="ogAmJO7uO77wkTS9rDwV1x">HAR</div>
+    <div data-page-node-id="chuA8UQtHxugLOVRSP9IyL">
+      <h1 data-page-node-id="ZqNEoEWLRUiHl6xQAG7CCZ">HAR 接口检索器</h1>
+      <p data-page-node-id="PzXTeOd0avk6QsJg2GsACu">本地解析 · 文件不上传 · 不请求任何第三方接口</p>
     </div>
   </div>
-  <div class="topbar-spacer"></div>
-  <span class="file-meta" id="fileMeta"></span>
-  <button class="btn ghost" id="btnSample">载入示例</button>
-  <button class="btn" id="btnClear" hidden>清空</button>
-  <button class="btn primary" id="btnOpen">选择 .har 文件</button>
-  <input type="file" id="fileInput" accept=".har,.json,application/json" hidden>
+  <div class="topbar-spacer" data-page-node-id="Qp2tUBBKp65Z44yBACXwE3"></div>
+  <span class="file-meta" id="fileMeta" data-page-node-id="KlNDI1qdNvkfBdARTRG64K"></span>
+  <button class="btn ghost" id="btnSample" data-page-node-id="iw3PWVPaACcfmQTYD8UBxD">载入示例</button>
+  <button class="btn" id="btnClear" hidden data-page-node-id="zIBg2BsvOGx6AZHsnGV9Lo">清空</button>
+  <button class="btn primary" id="btnOpen" data-page-node-id="Ol7zBHuRFB5f8X39BBuAwU">选择 .har 文件</button>
+  <input type="file" id="fileInput" accept=".har,.json,application/json" hidden data-page-node-id="4G4RSqQiXz2xAa46MpLUEd">
 </header>
 
 <!-- 空状态 -->
-<div class="empty-wrap" id="emptyState">
-  <div class="drop-card" id="dropCard">
-    <div class="ico">&#128269;</div>
-    <h2>拖入浏览器导出的 .har 文件</h2>
-    <p>自动解析全部接口请求，输入关键字即可定位它出现在哪个接口、哪个字段</p>
-    <button class="btn primary" id="btnOpen2">选择文件</button>
-    <div class="tips">
-      <ul style="margin:0;padding-left:18px">
-        <li>Chrome / Edge：开发者工具 &rarr; <code>Network</code> &rarr; 刷新页面 &rarr; 右键请求列表 &rarr; <code>Save all as HAR with content</code></li>
-        <li>Firefox：<code>网络</code> &rarr; 右键 &rarr; <code>全部另存为 HAR</code></li>
-        <li>检索范围覆盖：URL / Query 参数 / 请求头 / 请求体 / 响应头 / 响应体 / Cookie</li>
-        <li>响应体为 JSON 时会给出字段路径（如 <code>$.data.list[2].name</code>），非 JSON 文本给出行号</li>
+<div class="empty-wrap" id="emptyState" data-page-node-id="FZsr2bChbpR2QxNtQawpfb">
+  <div class="drop-card" id="dropCard" data-page-node-id="2BCnGha3z9xoHrpDGNP4xd">
+    <div class="ico" data-page-node-id="nlG6yGMX6zyTRuwBnnttal">&#128269;</div>
+    <h2 data-page-node-id="XYWUvm1Hh20k2fiauThosJ">拖入浏览器导出的 .har 文件</h2>
+    <p data-page-node-id="wwVewE796Vnha1njKRD8gu">自动解析全部接口请求，输入关键字即可定位它出现在哪个接口、哪个字段</p>
+    <button class="btn primary" id="btnOpen2" data-page-node-id="U0zH1kpGIam76jCQfKYG5X">选择文件</button>
+    <div class="tips" data-page-node-id="wyVzJvIyFALCtXqd8ppVHa">
+      <ul style="margin:0;padding-left:18px" data-page-node-id="cXazd0HdmkDKpUdkF2avIg">
+        <li data-page-node-id="a3pOB8oUqzwtFXJlD6OHdC">Chrome / Edge：开发者工具 &rarr; <code data-page-node-id="r61d1uCc0C0rfri2KptFvB">Network</code> &rarr; 刷新页面 &rarr; 右键请求列表 &rarr; <code data-page-node-id="gmYyymMfVUiuiBCQ2mkBV4">Save all as HAR with content</code></li>
+        <li data-page-node-id="3hI1F6v9zNgIoH6gA5rQFY">Firefox：<code data-page-node-id="g0ijIoxxPfpMxhbXjwFjEk">网络</code> &rarr; 右键 &rarr; <code data-page-node-id="yQ0RnbbEeRstcy6MQ79QuH">全部另存为 HAR</code></li>
+        <li data-page-node-id="TkoyOMg9CNvWS6fu4xzXaZ">检索范围覆盖：URL / Query 参数 / 请求头 / 请求体 / 响应头 / 响应体 / Cookie</li>
+        <li data-page-node-id="65HiDtH0sKiHdaqfBSqyHY">响应体为 JSON 时会给出字段路径（如 <code data-page-node-id="zjtdZAjNJQ0bAhYFzVBBij">$.data.list[2].name</code>），非 JSON 文本给出行号</li>
       </ul>
     </div>
   </div>
 </div>
 
 <!-- 主界面 -->
-<div class="layout" id="layout">
-  <aside class="sidebar">
-    <p class="field-label">关键字</p>
-    <div class="search-row">
-      <input id="q" type="text" placeholder="如 orderId / 张三 / 13800138000" autocomplete="off" spellcheck="false">
-      <button class="btn primary" id="btnSearch">检索</button>
+<div class="layout" id="layout" data-page-node-id="Tt0KctitWrU8PYxBMY87jF">
+  <aside class="sidebar" data-page-node-id="o5JtPqLAF7jxnsZxSolv1b">
+    <p class="field-label" data-page-node-id="Si6YxeGl3RVyd3YoNstRdC">关键字</p>
+    <div class="search-row" data-page-node-id="WbSs9gC1NWpCiDPFQFmDpA">
+      <input id="q" type="text" placeholder="如 orderId / 张三 / 13800138000" autocomplete="off" spellcheck="false" data-page-node-id="Tv5npmpu0EZNuIJEQKaNkR">
+      <button class="btn primary" id="btnSearch" data-page-node-id="v5LnHQmD0JX2IfO87WYbzM">检索</button>
     </div>
-    <div class="opt-row">
-      <label><input type="checkbox" id="optCase"> 区分大小写</label>
-      <label><input type="checkbox" id="optRegex"> 正则</label>
-    </div>
-
-    <p class="field-label">检索范围</p>
-    <div class="chips" id="scopes">
-      <button class="chip on" data-scope="url">URL / Query</button>
-      <button class="chip on" data-scope="reqHeader">请求头</button>
-      <button class="chip on" data-scope="reqBody">请求体</button>
-      <button class="chip on" data-scope="resHeader">响应头</button>
-      <button class="chip on" data-scope="resBody">响应体</button>
-      <button class="chip on" data-scope="cookie">Cookie</button>
-    </div>
-    <div class="chips-actions">
-      <button class="link-btn" id="scopeAll">全选</button>
-      <button class="link-btn" id="scopeNone">全不选</button>
-      <button class="link-btn" id="scopeReset">恢复默认</button>
+    <div class="opt-row" data-page-node-id="mYifJxXGBh51hILsllXMuJ">
+      <label data-page-node-id="xZIIeWC8eJqndHfX0BjwTQ"><input type="checkbox" id="optCase" data-page-node-id="QSyHdSePPmkEtnOgGvuvux"> 区分大小写</label>
+      <label data-page-node-id="chmXgaOTPdLk0HQ6n6AAe1"><input type="checkbox" id="optRegex" data-page-node-id="qywqfPJSl66GqqGG89ssTN"> 正则</label>
     </div>
 
-    <p class="field-label">接口过滤</p>
-    <div class="filters">
-      <select id="fMethod"><option value="">全部方法</option></select>
-      <select id="fType"><option value="">全部类型</option></select>
+    <p class="field-label" data-page-node-id="E7laOEk0H6tKyia03jMVqI">检索范围</p>
+    <div class="chips" id="scopes" data-page-node-id="ZlIU5tF4oXw2C3XHXiRBon">
+      <button class="chip on" data-scope="url" data-page-node-id="RhB1P9X1UfBIO6IPECm5Mg">URL / Query</button>
+      <button class="chip on" data-scope="reqHeader" data-page-node-id="AHC0AKTRJDyE5eQ0jfCRdo">请求头</button>
+      <button class="chip on" data-scope="reqBody" data-page-node-id="177L6zf4AGaDHd2K8oaAFi">请求体</button>
+      <button class="chip on" data-scope="resHeader" data-page-node-id="uSmqdK5lptOSuLtXCHCKL5">响应头</button>
+      <button class="chip on" data-scope="resBody" data-page-node-id="rezUT1Z0G3fiso6xgqOvPU">响应体</button>
+      <button class="chip on" data-scope="cookie" data-page-node-id="slbWKkeu8GQ5fic8uxGOpq">Cookie</button>
+    </div>
+    <div class="chips-actions" data-page-node-id="qkAN3FzFyxPdcnSQoL6CmT">
+      <button class="link-btn" id="scopeAll" data-page-node-id="SD7dcgI4ytSDwTBMiV8sdj">全选</button>
+      <button class="link-btn" id="scopeNone" data-page-node-id="I3CDjvOfyrHoNTdjij10Xv">全不选</button>
+      <button class="link-btn" id="scopeReset" data-page-node-id="FndDfgHRqCIwqQseaOZgRx">恢复默认</button>
     </div>
 
-    <div class="stat-box" id="statBox">
-      <div class="stat-grid">
-        <div class="stat-item"><div class="n" id="stReq">-</div><div class="l">请求总数</div></div>
-        <div class="stat-item"><div class="n" id="stApi">-</div><div class="l">接口数（去重）</div></div>
-        <div class="stat-item"><div class="n" id="stHitApi">-</div><div class="l">命中接口</div></div>
-        <div class="stat-item"><div class="n" id="stHit">-</div><div class="l">命中位置</div></div>
+    <p class="field-label" data-page-node-id="KyJqWFs4XWSBXuoYRm8Be8">接口过滤</p>
+    <div class="filters" data-page-node-id="kmI8KgAjK4UqfzQJxKrlB1">
+      <select id="fMethod" data-page-node-id="dnBdPL0OQFkwyAuOQirncD"><option value="" data-page-node-id="RNw0bjq0AVXcUrZU1SnUAf">全部方法</option></select>
+      <select id="fType" data-page-node-id="MmfsJuvY2U1h54tOKCPLwG"><option value="" data-page-node-id="bGlSF2Xeh3aOzLfkRDJyTm">全部类型</option></select>
+    </div>
+
+    <div class="stat-box" id="statBox" data-page-node-id="TkOSqjCBl6HBIzwFBYfLEy">
+      <div class="stat-grid" data-page-node-id="RabFXF0Tz7wxgAOnzRotFo">
+        <div class="stat-item" data-page-node-id="Pw0L26Q2vcQYSIot4fB0ls"><div class="n" id="stReq" data-page-node-id="miPjcnG57EaD86UMKFi1nt">-</div><div class="l" data-page-node-id="S1yf8jDOvbGDjiaIhHnl6t">请求总数</div></div>
+        <div class="stat-item" data-page-node-id="AXEEInQiW3t5XUEUKvvmVO"><div class="n" id="stApi" data-page-node-id="ZKofF450sXY8G8uazeeEDG">-</div><div class="l" data-page-node-id="HwEHjbd2L0y5UlJDYv3fyq">接口数（去重）</div></div>
+        <div class="stat-item" data-page-node-id="hWyWxFXulIregADFbKjtzD"><div class="n" id="stHitApi" data-page-node-id="kU2RFTzsGKgQHhGCKd1WBp">-</div><div class="l" data-page-node-id="jPx9bEXjH37ZxpurRORNk4">命中接口</div></div>
+        <div class="stat-item" data-page-node-id="Oxn9u176SeIsEB2mAdtjuT"><div class="n" id="stHit" data-page-node-id="xddbwTCnC1XgB3zr6hIHuT">-</div><div class="l" data-page-node-id="WbmpfqGOCQzQNxtUZvsKhU">命中位置</div></div>
       </div>
-      <div class="progress" id="progWrap" hidden><i id="prog"></i></div>
+      <div class="progress" id="progWrap" hidden data-page-node-id="Yhjd8RJiB7DwdrRNhmHGWY"><i id="prog" data-page-node-id="1DApZBadlickS4sQqnWMcn"></i></div>
     </div>
 
-    <div class="toolbar-row">
-      <button class="btn sm" id="btnExportJson" disabled>导出命中 JSON</button>
-      <button class="btn sm" id="btnExportCsv" disabled>导出 CSV</button>
+    <div class="toolbar-row" data-page-node-id="PR6nOr1784H3qdWxfuqESw">
+      <button class="btn sm" id="btnExportJson" disabled data-page-node-id="OJdMDCWDW5C8ISshl5wI20">导出命中 JSON</button>
+      <button class="btn sm" id="btnExportCsv" disabled data-page-node-id="LTzEezaQ4QLJdyxkylNjim">导出 CSV</button>
     </div>
-    <div class="divider"></div>
-    <p class="hint">
-      提示：输入框内按 <span class="kbd">Enter</span> 立即检索，输入停顿 300ms 自动检索。<br>
+    <div class="divider" data-page-node-id="LhDd6r2NS7oyyvLHClA8ox"></div>
+    <p class="hint" data-page-node-id="z8rGSxXWMvQ45x0naZwtyG">
+      提示：输入框内按 <span class="kbd" data-page-node-id="beN5wzr1SSMK5ugUgH0wcQ">Enter</span> 立即检索，输入停顿 300ms 自动检索。<br data-page-node-id="2KcxBcDeEGMoEoZMH7ev7f">
       点击命中项可打开右侧详情，并自动高亮定位。
     </p>
   </aside>
 
-  <section class="content">
-    <div class="tabs">
-      <button class="tab on" data-tab="matches">匹配结果 <span class="cnt" id="tabCntHit">0</span></button>
-      <button class="tab" data-tab="all">全部接口 <span class="cnt" id="tabCntAll">0</span></button>
+  <section class="content" data-page-node-id="e97aOeWuOjvzsR29p0xGDO">
+    <div class="tabs" data-page-node-id="kMT1QnImUQfzD8knu71m5w">
+      <button class="tab on" data-tab="matches" data-page-node-id="LapX530m1Ct7N14PEkuuom">匹配结果 <span class="cnt" id="tabCntHit" data-page-node-id="jl8YH93RDy3ElDy7L8UqSQ">0</span></button>
+      <button class="tab" data-tab="all" data-page-node-id="6BS3odLC4DDRuSFelpqNlh">全部接口 <span class="cnt" id="tabCntAll" data-page-node-id="lGPeXCskydzrQ5gbG7TCX6">0</span></button>
     </div>
-    <div id="results"></div>
+    <div id="results" data-page-node-id="yOFlfX4Uv5gIllC05MsWZW"></div>
   </section>
 </div>
 
-<div class="mask" id="mask"></div>
-<div class="drawer" id="drawer">
-  <div class="drawer-head">
-    <span id="dMethod" class="m m-GET">GET</span>
-    <span class="path" id="dPath"></span>
-    <button class="btn sm" id="dCurl">复制 cURL</button>
-    <button class="x" id="dClose" title="关闭">&times;</button>
+<div class="mask" id="mask" data-page-node-id="j98fM3V0BQCN0g4bAs0Tnr"></div>
+<div class="drawer" id="drawer" data-page-node-id="WjRKrk5BvaGA3PIxrz5vSC">
+  <div class="drawer-head" data-page-node-id="xbUDvPMTI1XQMhqAHnUVif">
+    <span id="dMethod" class="m m-GET" data-page-node-id="gtAAeMCuVwtXUf7PntWccO">GET</span>
+    <span class="path" id="dPath" data-page-node-id="YKQhcVM5EFoTRhjyHuXxuB"></span>
+    <button class="btn sm" id="dCurl" data-page-node-id="EitXIBqFFOmSMgP5KlikYQ">复制 cURL</button>
+    <button class="x" id="dClose" title="关闭" data-page-node-id="RaVXERKL7pHNcTZrRvatPG">&times;</button>
   </div>
-  <div class="drawer-tabs" id="dTabs"></div>
-  <div class="drawer-body" id="dBody"></div>
+  <div class="drawer-tabs" id="dTabs" data-page-node-id="exJ5cQoIod9DiK53dfAV3D"></div>
+  <div class="drawer-body" id="dBody" data-page-node-id="0zRzupYFb0G4t7TRjlF04z"></div>
 </div>
 
-<div class="drag-overlay" id="dragOverlay">松开鼠标载入 .har 文件</div>
-<div class="toast" id="toast"></div>
+<div class="drag-overlay" id="dragOverlay" data-page-node-id="EqVDSytecvo3JLOIaNf2BD">松开鼠标载入 .har 文件</div>
+<div class="toast" id="toast" data-page-node-id="EPw7DJabqN6vw0oQClW0JH"></div>
 
 <script>
 (function () {

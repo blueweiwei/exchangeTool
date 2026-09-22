@@ -18,6 +18,10 @@
     --accent: #4cc9f0;
     --accent-dim: rgba(76, 201, 240, 0.15);
     --accent-glow: rgba(76, 201, 240, 0.25);
+    /* 日间模式强调色：--accent-light 用于文字/边框（白底需对比度），
+       --accent-solid 用于实心块底（配深色文字，故保留亮色） */
+    --accent-light: #0369a1;
+    --accent-solid: #4cc9f0;
     --green: #34d399;
     --green-dim: rgba(52, 211, 153, 0.15);
     --orange: #fbbf24;
@@ -686,6 +690,9 @@
     background: rgba(25, 31, 44, 0.9);
   }
 </style>
+
+<!-- 全局主题：夜间 / 日间切换（localStorage 持久化，跨页面生效） -->
+<script src="js/theme.js"></script>
 </head>
 <body>
 

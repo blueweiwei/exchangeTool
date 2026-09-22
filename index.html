@@ -18,6 +18,10 @@
     --accent: #f0a84c;
     --accent-dim: rgba(240, 168, 76, 0.12);
     --accent-glow: rgba(240, 168, 76, 0.2);
+    /* 日间模式强调色：--accent-light 用于文字/边框（白底需对比度），
+       --accent-solid 用于实心块底（配深色文字，故保留亮色） */
+    --accent-light: #b45309;
+    --accent-solid: #f0a84c;
     --green: #4cd97a;
     --green-dim: rgba(76, 217, 122, 0.12);
     --red: #f06060;
@@ -589,6 +593,9 @@
     .cat-btn { font-size: 12px; padding: 6px 14px; }
   }
 </style>
+
+<!-- 全局主题：夜间 / 日间切换（localStorage 持久化，跨页面生效） -->
+<script src="js/theme.js"></script>
 </head>
 <body>
 
