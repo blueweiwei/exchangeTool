@@ -645,12 +645,15 @@
     return url && !url.startsWith('http') && !url.startsWith('//') && !url.startsWith('https');
   }
 
-  // 离线回退
+  // 离线回退：file:// 双击打开时 fetch('tools.json') 会被浏览器拦截（origin 为 null），
+  // 必定走此清单。⚠ 新增工具时必须与 tools.json 同步维护，否则双击打开看不到该工具。
   const FALLBACK_TOOLS = [
-    { id: 'fb1', name: 'Base64转换器', url: 'base64-image-converter.html', desc: 'Base64 与图片互转、Base64 与文字互转，支持拖拽上传、粘贴截图、自动解码', icon: '🖼️', category: 'convert' },
-    { id: 'fb2', name: '签名生成工具', url: 'signature-tool.html', desc: '报文签名值计算，JSON 参数 ASCII 排序后 HMAC + Base64 签名', icon: '🔐', category: 'convert' },
-    { id: 'fb3', name: '开发者工具箱', url: 'dev-toolkit.html', desc: 'URL编解码、JSON转义/格式化、XML格式化、时间戳互转、UUID生成、文字转二维码', icon: '🧰', category: 'dev' },
-	{"id":"t2c","name":"电子发票加解密(博思)","url":"einvoice-bosi.html","desc":"博思电子发票接口签名/验签，BASE64+MD5 签名算法，支持加密签名与解密验签","icon":"🧾","category":"convert"},
+    { id: 't1', name: 'Base64转换器', url: 'base64-image-converter.html', desc: 'Base64 与图片互转、Base64 与文字互转，支持拖拽上传、粘贴截图、自动解码', icon: '🖼️', category: 'convert' },
+    { id: 't2', name: '签名生成工具', url: 'signature-tool.html', desc: '报文签名值计算，JSON 参数 ASCII 排序后 HMAC + Base64 签名', icon: '🔐', category: 'convert' },
+    { id: 't2b', name: '签名生成工具(浙江CA)', url: 'signature-tool.html', desc: '北京CA协同版本 + 浙江CA医疗签，HMAC-SHA256 签名，支持 Base64/Hex 输出', icon: '🀄', category: 'convert' },
+    { id: 't2c', name: '电子发票加解密(博思)', url: 'einvoice-bosi.html', desc: '博思电子发票接口签名/验签，BASE64+MD5 签名算法，支持加密签名与解密验签', icon: '🧾', category: 'convert' },
+    { id: 't3', name: 'HAR 接口检索器', url: 'har-inspector.html', desc: '拖入浏览器导出的 .har 抓包文件，按关键字（接口路径/请求参数/响应内容）本地检索定位接口调用，内置示例数据可离线体验', icon: '🔍', category: 'dev' },
+    { id: 't4', name: '开发者工具箱', url: 'dev-toolkit.html', desc: 'URL编解码、JSON转义/格式化、XML格式化、时间戳互转、UUID生成、文字转二维码', icon: '🧰', category: 'dev' },
   ];
 
   // === 从 tools.json 加载清单（读取同级目录下所有 HTML 工具） ===
