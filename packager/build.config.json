@@ -1,0 +1,41 @@
+{
+  "source": {
+    "dir": "..",
+    "include": [
+      "**/*.html",
+      "**/*.css",
+      "**/*.js",
+      "**/*.json",
+      "**/*.map",
+      "**/*.svg",
+      "**/*.png",
+      "**/*.jpg",
+      "**/*.jpeg",
+      "**/*.gif",
+      "**/*.ico",
+      "**/*.woff",
+      "**/*.woff2",
+      "**/*.ttf",
+      "**/*.txt"
+    ],
+    "exclude": [
+      "har-inspector - 副本.html"
+    ]
+  },
+  "output": {
+    "dir": "../dist",
+    "name": "ToolsBox.exe"
+  },
+  "window": {
+    "title": "工具导航站",
+    "width": 1440,
+    "height": 960,
+    "entry": "index.html",
+    "userAgent": ""
+  },
+  "build": {
+    "goos": "windows",
+    "goarch": "amd64",
+    "ldflags": "-s -w -H=windowsgui"
+  }
+}
