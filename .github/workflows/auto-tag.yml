@@ -1,0 +1,109 @@
+name: 自动打标签
+
+# 每次推送到主分支自动生成一个语义化版本标签（vX.Y.Z）。
+# 也可以在 Actions 页面手动触发，并指定递增类型。
+#
+# 注意：用 GITHUB_TOKEN 推送的标签【不会】触发其他工作流（GitHub 的防递归限制）。
+# 因此 Release 由「构建并发布 Release」工作流手动触发，或改用 PAT 后自行加 tag 触发。
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 版本递增类型
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+# 推送标签需要写权限
+permissions:
+  contents: write
+
+# 串行执行：并发推送时避免算出重复或跳号的标签
+concurrency:
+  group: auto-tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: 计算并推送标签
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.next.outputs.tag }}
+    steps:
+      - name: 检出（需要完整标签历史）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 计算下一个版本号
+        id: next
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 手动触发时用输入的递增类型，push 触发时默认 patch
+          bump="${{ github.event.inputs.bump || 'patch' }}"
+
+          # 取当前最新的 vX.Y.Z 标签（按版本号排序，而非字典序）
+          latest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)"
+          latest="${latest:-v0.0.0}"
+
+          ver="${latest#v}"
+          major="${ver%%.*}"
+          rest="${ver#*.}"
+          minor="${rest%%.*}"
+          patch="${rest#*.}"
+
+          case "$bump" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            *)     patch=$((patch + 1)) ;;
+          esac
+
+          tag="v${major}.${minor}.${patch}"
+
+          # 幂等保护：万一标签已存在，继续递增直到可用
+          while git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; do
+            patch=$((patch + 1))
+            tag="v${major}.${minor}.${patch}"
+          done
+
+          echo "上一个标签: $latest"
+          echo "本次标签  : $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: 创建并推送标签
+        env:
+          TAG: ${{ steps.next.outputs.tag }}
+          COMMIT_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" "$COMMIT_SHA" -m "自动标签 $TAG（由 $ACTOR 的提交触发）"
+          git push origin "refs/tags/$TAG"
+          echo "已推送标签 $TAG -> ${COMMIT_SHA:0:8}"
+
+      - name: 写入步骤摘要
+        if: always()
+        run: |
+          {
+            echo "## 自动打标签"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "|---|---|"
+            echo "| 新标签 | \`${{ steps.next.outputs.tag }}\` |"
+            echo "| 提交 | \`${GITHUB_SHA:0:8}\` |"
+            echo "| 触发方式 | ${{ github.event_name }} |"
+            echo ""
+            echo "如需发布可执行文件，请到 Actions 页面手动运行「构建并发布 Release」。"
+          } >> "$GITHUB_STEP_SUMMARY"

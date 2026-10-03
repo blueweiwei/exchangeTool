@@ -1,0 +1,179 @@
+name: 构建并发布 Release
+
+# 手动触发：选择一个标签，构建单文件 exe，并发布到 GitHub Release。
+#
+# 为什么不用「推送标签自动发布」？
+#   本仓库的标签由 auto-tag.yml 用 GITHUB_TOKEN 推送，
+#   而 GITHUB_TOKEN 推送的事件不会触发其他工作流（GitHub 防递归限制）。
+#   若想改成推送标签即自动发布，见 packager/README.md 的说明。
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 要构建并发布的标签（留空 = 使用仓库最新标签）
+        required: false
+        default: ''
+      version:
+        description: 写入 exe 的版本号（留空 = 与标签一致）
+        required: false
+        default: ''
+      prerelease:
+        description: 标记为预发布（Pre-release）
+        type: boolean
+        default: false
+
+# 创建 Release 需要写权限
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    name: 打包并发布
+    runs-on: windows-latest
+    steps:
+      - name: 检出（需要完整标签历史）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 解析目标标签并切换到对应提交
+        id: resolve
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+
+          $tag = "${{ inputs.tag }}".Trim()
+          if (-not $tag) {
+            $tag = (git describe --tags --abbrev=0).Trim()
+          }
+          if (-not $tag) {
+            throw '仓库里没有任何标签，请先运行「自动打标签」工作流。'
+          }
+
+          git checkout --quiet $tag
+          if ($LASTEXITCODE -ne 0) { throw "切换到标签失败: $tag" }
+          $sha = (git rev-parse HEAD).Trim()
+
+          $ver = "${{ inputs.version }}".Trim()
+          if (-not $ver) { $ver = $tag }
+
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "tag=$tag`n",     $utf8)
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "sha=$sha`n",     $utf8)
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "version=$ver`n", $utf8)
+
+          Write-Output "目标标签 : $tag"
+          Write-Output "对应提交 : $($sha.Substring(0, 8))"
+          Write-Output "版本号   : $ver"
+
+      - name: 安装 Go
+        uses: actions/setup-go@v5
+        with:
+          # 直接读 packager/go.mod 的 go 指令，保证满足最低版本要求
+          go-version-file: packager/go.mod
+          cache: true
+          cache-dependency-path: packager/go.sum
+
+      - name: 打包 exe
+        id: build
+        shell: pwsh
+        run: |
+          ./packager/build.ps1 -Version "${{ steps.resolve.outputs.version }}"
+
+      - name: 更新暂存产物（便于排错下载）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ToolsBox-${{ steps.resolve.outputs.tag }}
+          path: dist/*.exe
+          if-no-files-found: error
+
+      - name: 检查产物
+        id: check
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = "${{ steps.build.outputs.exe_path }}"
+          if (-not (Test-Path -LiteralPath $exe)) { throw "找不到构建产物: $exe" }
+          $len = (Get-Item -LiteralPath $exe).Length
+          if ($len -lt 1MB) { throw "产物体积异常（$len 字节），疑似打包失败" }
+          Write-Output "产物校验通过: $exe ($([math]::Round($len / 1MB, 2)) MB)"
+
+      - name: 生成发布说明
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          $exe  = "${{ steps.build.outputs.exe_path }}"
+          $tag  = "${{ steps.resolve.outputs.tag }}"
+          $sha  = "${{ steps.resolve.outputs.sha }}"
+          $ver  = "${{ steps.resolve.outputs.version }}"
+          $hash = "${{ steps.build.outputs.sha256 }}"
+          $mb   = '{0:N2}' -f ((Get-Item -LiteralPath $exe).Length / 1MB)
+
+          $lines = @(
+            "自动构建的 Windows 单文件可执行程序。静态资源已内嵌进 exe，**无需安装任何依赖**，下载后双击即可运行。",
+            "",
+            "### 产物",
+            "",
+            "| 文件 | 大小 | SHA256 |",
+            "| --- | --- | --- |",
+            "| ``ToolsBox.exe`` | $mb MB | ``$hash`` |",
+            "",
+            "### 运行要求",
+            "",
+            "- Windows 10 及以上",
+            "- WebView2 运行时（Windows 10/11 通常已自带；缺失时从 Microsoft 官网安装 WebView2 Runtime）",
+            "",
+            "### 打包信息",
+            "",
+            "| 项 | 值 |",
+            "| --- | --- |",
+            "| 版本号 | ``$ver`` |",
+            "| 代码提交 | ``$($sha.Substring(0, 8))`` |",
+            "| 内嵌文件数 | ${{ steps.build.outputs.file_count }} |"
+          )
+          [System.IO.File]::WriteAllText((Join-Path $PWD 'release-notes.md'), (($lines -join "`n") + "`n"), $utf8)
+          Write-Output '发布说明已生成'
+
+      - name: 创建或更新 Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "${{ steps.resolve.outputs.tag }}"
+          $sha = "${{ steps.resolve.outputs.sha }}"
+          $exe = "${{ steps.build.outputs.exe_path }}"
+          $pre = ("${{ inputs.prerelease }}".Trim() -eq 'true')
+
+          # 探测 Release 是否已存在（原生命令的非零退出码不应中断流程）
+          $prevEap = $ErrorActionPreference
+          $ErrorActionPreference = 'Continue'
+          gh release view $tag --json tagName 2>&1 | Out-Null
+          $exists = ($LASTEXITCODE -eq 0)
+          $ErrorActionPreference = $prevEap
+
+          if ($exists) {
+            Write-Output "Release $tag 已存在，覆盖上传产物"
+            gh release upload $tag $exe --clobber
+            if ($LASTEXITCODE -ne 0) { throw "上传产物失败" }
+          } else {
+            Write-Output "创建 Release $tag"
+            $ghArgs = @(
+              'release', 'create', $tag, $exe,
+              '--title', $tag,
+              '--notes-file', 'release-notes.md',
+              '--target', $sha
+            )
+            if ($pre) { $ghArgs += '--prerelease' }
+            & gh @ghArgs
+            if ($LASTEXITCODE -ne 0) { throw "创建 Release 失败" }
+          }
+
+          Write-Output "完成：${{ github.server_url }}/${{ github.repository }}/releases/tag/$tag"
