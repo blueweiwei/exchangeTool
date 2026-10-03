@@ -1,134 +1,180 @@
-# 推送到 GitHub —— 环境限制与可用方案
+# 推送到 GitHub —— 环境限制与解决方案
 
-> 本文记录 2026-10-03 实测结论。**代码提交本身已完成**（本地 `master` = `2a01b5c`），
-> 只有「推送」这一步受网络环境阻塞。
+> 2026-10-03 实测记录。**主体代码已推送成功**（远端 `master` = `42a9436`），
+> 仅 `.github/workflows/` 两个工作流文件因令牌权限无法推送。
 
-## 一、当前环境实测结果
+## 一、当前状态
 
-| 检查项 | 结果 |
+| 内容 | 状态 |
 |---|---|
-| `origin` | `https://gh-proxy.org/https://github.com/blueweiwei/exchangeTool` |
-| `gh-proxy.org` 读操作（`git ls-remote`） | ✅ 正常 |
-| `gh-proxy.org` 写操作（`git push`） | ❌ `No anonymous write access` |
-| `gh-proxy.org` 写端点预检 | HTTP 401（通道存在，但代理不透传认证） |
-| `github.com:443` 直连 | ❌ TCP 不通（被墙） |
-| `api.github.com:443` 直连 | ✅ 通（HTTP 200） |
-| `ssh.github.com:443`（SSH over 443） | ✅ TCP 通 |
-| `codeload / raw / objects.githubusercontent.com` | ✅ 通 |
-| 本机可用 HTTP 代理端口 | ❌ 全部关闭（46963/7890/10809/1080/8080/10808） |
-| `~/.git-credentials` 内容 | 仅 `cnb.cool`，**无** github / gh-proxy 凭据 |
-| 令牌 scope | `repo`（足够推送） |
-| 令牌对 `blueweiwei/exchangeTool` 权限 | `admin: True, push: True` ✅ |
+| `packager/` 打包器（11 个文件） | ✅ **已推送到远端 master** |
+| `.gitignore` / `.gitattributes` | ✅ 已推送 |
+| `.github/workflows/auto-tag.yml` | ❌ 未推送（令牌缺 `workflow` scope） |
+| `.github/workflows/release.yml` | ❌ 未推送（同上） |
 
-**根因**：`gh-proxy.org` 是一个只读镜像代理，它**不会把客户端的 `Authorization` 头透传给 GitHub**，
-因此任何凭据都无法用于写入。而直连 `github.com:443` 被网络阻断。
-
-**排除项**（这些都没问题，不用再查）：
-- 令牌有效性 → 已用 `/user` 验证，身份 `blueweiwei`
-- 仓库写权限 → 已用 `/user/repos` 验证，`push=True` / `admin=True`
-- 令牌 scope → 已用响应头 `X-OAuth-Scopes: repo` 验证，足够
-- 证书问题 → 已用 `http.sslBackend=openssl` + `sslVerify=false` 绕过，其后报错变为
-  `repository not found`，证明 TLS 不是障碍
+远端确认：`refs/heads/master = 42a94367c0c5fc5ac625b150d3f83a503231d217`
+本地与远端已一致，无分叉。工作流文件完好保留在工作区 `.github/workflows/`。
 
 ---
 
-## 二、推荐方案：SSH over 443
+## 二、必须先解决：令牌缺 `workflow` scope
 
-`ssh.github.com:443` 实测可达，这是 GitHub 官方的备用 SSH 端口，
-专为 443 被放行、22 被封的环境设计，且不经过任何代理。
+GitHub 有一条硬性保护规则：
 
-### 步骤 1：生成密钥
+> **任何令牌若没有 `workflow` scope，就不得创建或更新 `.github/workflows/` 下的文件。**
+> git 推送和 REST API 都会被拒绝。
+
+实测到的两种拒绝：
+
+```
+# git push
+! [remote rejected] master -> master (refusing to allow a Personal Access Token
+  to create or update workflow `.github/workflows/auto-tag.yml` without `workflow` scope)
+
+# Contents API
+HTTP 403 {"message":"Resource not accessible by personal access token"}
+```
+
+当前令牌 scope 为 `X-OAuth-Scopes: repo`（缺 `workflow`）。
+**这是 GitHub 的安全设计，无法绕过**，必须换令牌。
+
+### 解决步骤
+
+1. 打开 https://github.com/settings/tokens
+2. 编辑现有令牌（或新建一个 classic token），**勾选 `workflow`**（`repo` 基础上加这一个）
+3. 保存后把新令牌给我，直接执行：
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_gh -N "" -C "exchangeTool"
+git add .github/workflows
+git commit -m "新增 GitHub Actions：推送自动打标签 + 手动构建发布 Release"
+git push origin master
+```
+
+勾选 `workflow` 后，这两条命令一次通过。
+
+---
+
+## 三、网络通道：本机连不上 GitHub 的解决办法
+
+本机网络对 GitHub 的封锁方式比较特殊，实测结果：
+
+| 检查项 | 结果 |
+|---|---|
+| `github.com` DNS 解析 | `20.205.243.166` |
+| `github.com:443` 该 IP | ❌ TCP 不通 |
+| `140.82.112.3 / 113.3 / 114.3 / 116.3` 等 | ✅ TCP 通 |
+| `20.27.177.113` / `20.200.245.247` | ✅ TCP 通 |
+| `api.github.com:443` | ✅ 通 |
+| `ssh.github.com:443` | ✅ 通 |
+| `gh-proxy.org` 读（`ls-remote`） | ✅ 正常 |
+| `gh-proxy.org` 写（`push`） | ❌ `No anonymous write access` |
+| 本机 HTTP 代理端口 | ❌ 全部关闭 |
+
+**根因**：`github.com` 被 DNS 污染到一个不可达的 IP，但 GitHub 的**其他官方 IP 是通的**。
+所以解决办法是绕开这个 DNS 结果。
+
+### 办法一：hosts 映射（本次采用，已验证有效）
+
+选定一个实测可达的 IP，写入 hosts：
+
+```
+# C:\Windows\System32\drivers\etc\hosts
+140.82.113.3 github.com
+```
+
+然后刷新 DNS 缓存并推送：
+
+```powershell
+ipconfig /flushdns
+```
+
+```bash
+git push https://<用户名>:<令牌>@github.com/blueweiwei/exchangeTool master
+```
+
+**注意**：
+- hosts 需要管理员权限写入（本次环境恰好可写）
+- IP 会失效，失效后换下一个（探测方法见下）
+- 用完记得把 hosts 里的映射删掉，避免影响其他程序
+
+### 探测可用 IP
+
+```bash
+for ip in 140.82.112.3 140.82.113.3 140.82.114.3 140.82.116.3 20.27.177.113 20.200.245.247; do
+  printf "%-18s " "$ip"
+  timeout 6 bash -c "cat < /dev/null > /dev/tcp/$ip/443" 2>/dev/null && echo "通" || echo "不通"
+done
+```
+
+### 办法二：SSH over 443（长期方案，推荐）
+
+`ssh.github.com:443` 实测可达，是 GitHub 官方的备用 SSH 端口，
+不依赖任何 IP 映射。
+
+```bash
+# 1. 生成密钥
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_gh -N ""
+
+# 2. 公钥加到 https://github.com/settings/ssh/new
 cat ~/.ssh/id_ed25519_gh.pub
-```
 
-### 步骤 2：把公钥加到 GitHub
+# 3. 配置 ~/.ssh/config
+# Host github.com
+#     HostName ssh.github.com
+#     Port 443
+#     User git
+#     IdentityFile ~/.ssh/id_ed25519_gh
+#     IdentitiesOnly yes
 
-打开 https://github.com/settings/ssh/new ，粘贴上一步输出的公钥内容，保存。
-
-> 无法自动注册：令牌 scope 只有 `repo`，缺 `admin:public_key`，
-> 调 `POST /user/keys` 会返回 404。必须手动添加，或给令牌补上 `admin:public_key` 后重试。
-
-### 步骤 3：配置 SSH 走 443
-
-写入 `~/.ssh/config`：
-
-```
-Host github.com
-    HostName ssh.github.com
-    Port 443
-    User git
-    IdentityFile ~/.ssh/id_ed25519_gh
-    IdentitiesOnly yes
-```
-
-### 步骤 4：验证并推送
-
-```bash
+# 4. 验证并推送
 ssh -T git@github.com
-# 期望输出：Hi blueweiwei! You've successfully authenticated...
-
 git remote set-url origin git@github.com:blueweiwei/exchangeTool.git
 git push origin master
 ```
 
-### 步骤 5（可选）：恢复代理地址用于拉取
+**重要优势**：`workflow` scope 的限制**只针对 Personal Access Token**，
+用 SSH 密钥认证时不受此限制 —— 报错原文即
+`refusing to allow a **Personal Access Token** to create or update workflow`。
+所以走 SSH 可以直接推送工作流文件，无需换令牌。
 
-若担心 SSH 拉取也受限，可保留双远端：
+> 本次未能自动注册 SSH 公钥：令牌 scope 只有 `repo`，
+> 调 `POST /user/keys` 返回 404（需 `admin:public_key`）。
+> 因此第 2 步必须**手动**在网页上添加公钥。
+
+---
+
+## 四、另一个待处理问题：默认分支是 `main`
+
+仓库当前状态：
+
+| 分支 | 内容 |
+|---|---|
+| `main`（**默认分支**） | 仅一条孤立的 `Initial commit`（`e1a2926`） |
+| `master` | 完整开发历史（10 个提交，最新 `42a9436`） |
+
+`origin/HEAD` 指向 `main`，所以**打开仓库首页看到的是那个空壳 `main`**，
+不是真正的代码。建议二选一：
+
+**方案 A：把默认分支改成 `master`（推荐，改动最小）**
+
+https://github.com/blueweiwei/exchangeTool/settings/branches
+→ Default branch → 选 `master` → Update
+
+**方案 B：把 `master` 合并进 `main`，保持 `main` 为默认**
 
 ```bash
-git remote add ghproxy https://gh-proxy.org/https://github.com/blueweiwei/exchangeTool
-git fetch ghproxy          # 只读走代理
-git push origin master     # 写入走 SSH
+git checkout main
+git merge master --allow-unrelated-histories
+git push origin main
 ```
+
+> 本仓库的两个工作流已同时监听 `master` 和 `main`，所以无论选哪个方案都能触发。
 
 ---
 
-## 三、备选方案：换一个可写的 HTTPS 代理
+## 五、推送之后
 
-`gh-proxy.org` 只读。若你有支持 `git-receive-pack` 的代理（如自建的 Nginx 反代、
-或带认证的镜像），可直接替换 origin：
-
-```bash
-git remote set-url origin https://<你的可用代理>/https://github.com/blueweiwei/exchangeTool
-git push origin master
-```
-
-判断代理是否支持写入：访问
-`https://<代理>/https://github.com/blueweiwei/exchangeTool.git/info/refs?service=git-receive-pack`
-返回 **401**（需认证）说明支持；返回 403/404 说明只读。
-
----
-
-## 四、备选方案：GitHub API 逐文件写入（不推荐）
-
-`api.github.com` 直连可用，理论上可用 Git Data API 推提交。
-但需要自行构造 tree/commit 对象，**会丢失作者信息与提交历史结构**，
-且对大仓库易触发限制。仅作最后手段，不推荐。
-
----
-
-## 五、当前待推送的内容
-
-```
-commit 2a01b5c  新增 packager 打包器与 CI：静态站点 → 单文件 exe
-  12 files changed, 1359 insertions(+)
-```
-
-推送成功后会自动触发 `.github/workflows/auto-tag.yml`：
-
-> ⚠️ 该工作流监听 `master` 与 `main` 两个分支，推送 `master` 会触发自动打标签。
-> 但注意仓库**默认分支是 `main`**（且 `main` 只有一条孤立的 `Initial commit`），
-> 而完整开发历史都在 `master`。建议到
-> https://github.com/blueweiwei/exchangeTool/settings/branches
-> 把默认分支改为 `master`，或把 `master` 合并进 `main`。
-
----
-
-## 六、推送后的下一步
-
-1. 到 **Actions** 页面确认「自动打标签」跑通，产生第一个 `v0.1.0` 标签
+1. 到 **Actions** 页面确认「自动打标签」跑通，应产生第一个 `v0.1.0` 标签
 2. 手动运行「**构建并发布 Release**」工作流
-3. 下载 Release 里的 exe 验证（7.26 MB 左右，双击可运行）
+3. 下载 Release 中的 exe 验证（约 7.26 MB，双击可运行，
+   首次运行需要系统装有 WebView2 运行时）
